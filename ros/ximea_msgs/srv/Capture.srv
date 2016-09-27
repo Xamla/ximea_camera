@@ -1,0 +1,3 @@
+---
+string[] serials                      # serial numbers of cameras
+sensor_msgs/Image[] images            # image data

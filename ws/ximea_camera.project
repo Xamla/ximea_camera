@@ -1,5 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CodeLite_Project Name="ximea_camera" InternalType="">
+  <VirtualDirectory Name="ros">
+    <VirtualDirectory Name="ximea_msgs">
+      <VirtualDirectory Name="msg">
+        <File Name="../ros/ximea_msgs/msg/StereoPair.msg"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="srv">
+        <File Name="../ros/ximea_msgs/srv/SendCommand.srv"/>
+        <File Name="../ros/ximea_msgs/srv/Capture.srv"/>
+        <File Name="../ros/ximea_msgs/srv/GetConnectedDevices.srv"/>
+      </VirtualDirectory>
+      <File Name="../ros/ximea_msgs/CMakeLists.txt"/>
+      <File Name="../ros/ximea_msgs/README.md"/>
+      <File Name="../ros/ximea_msgs/package.xml"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="examples">
+      <File Name="../ros/examples/capture_stereo.lua"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="ximea_nodes">
+      <File Name="../ros/ximea_nodes/stereo.lua"/>
+      <File Name="../ros/ximea_nodes/mono.lua"/>
+    </VirtualDirectory>
+  </VirtualDirectory>
   <Description/>
   <Dependencies/>
   <Settings Type="Dynamic Library">
