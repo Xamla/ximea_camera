@@ -90,10 +90,10 @@
     </Configuration>
   </Settings>
   <VirtualDirectory Name="ximea_camera">
-    <File Name="../ximea-scm-1.rockspec"/>
     <File Name="../README.md"/>
     <File Name="../CMakeLists.txt"/>
     <File Name="../.gitignore"/>
+    <File Name="../ximea_camera-scm-1.rockspec"/>
   </VirtualDirectory>
   <VirtualDirectory Name="examples">
     <File Name="../examples/singleImage.lua"/>
