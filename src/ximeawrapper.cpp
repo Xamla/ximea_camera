@@ -55,14 +55,14 @@ void initCam(unsigned int camNum, HANDLE &camera, XI_IMG_FORMAT color_fmt) {
   printCamList();
 
   xiSetParamInt(0, XI_PRM_DEBUG_LEVEL, XI_DL_FATAL);
-  
+
 
   // Disable auto bandwidth determination (takes some seconds in initialization)
   xiSetParamInt(0, XI_PRM_AUTO_BANDWIDTH_CALCULATION, XI_OFF);
 
 
   // Retrieve a handle to the camera device
-  stat = xiOpenDevice(camNum, &camera);  
+  stat = xiOpenDevice(camNum, &camera);
   HandleResult(stat,"xiOpenDevice");
 
   // Configure unsafe buffers (prevents old buffers, memory leak)
@@ -102,7 +102,7 @@ extern "C" void closeDevice(HANDLE camera) {
 }
 
 
-extern "C" void getNumberConnectedDevices(int* n) {
+extern "C" void getNumberConnectedDevices(int *n) {
   XI_RETURN stat = XI_OK;
   DWORD numCams;
   stat = xiGetNumberDevices(&numCams);
@@ -110,14 +110,13 @@ extern "C" void getNumberConnectedDevices(int* n) {
 }
 
 
-extern "C" bool getSerialsStereo(StereoHandle* handle, char* serial_cam1, char* serial_cam2) {
+extern "C" bool getSerialsStereo(StereoHandle *handle, char *serial_cam1, char *serial_cam2) {
   xiGetParamString(handle->cam1, XI_PRM_DEVICE_SN, serial_cam1, 20);
   xiGetParamString(handle->cam2, XI_PRM_DEVICE_SN, serial_cam2, 20);
 }
 
 
-extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTensor* image_out)
-{
+extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTensor *image_out) {
   XI_IMG image;
   image.size = SIZE_XI_IMG_V2; // must be initialized
   image.bp = NULL;
@@ -129,7 +128,7 @@ extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTe
   //Retrieve image from camera
   stat = xiGetImage(camera, 1000, &image);
   HandleResult(stat,"xiGetImage");
- 
+
   if (stat == XI_OK) {
     if (img_format == XI_MONO8) {
       THByteTensor_resize2d(image_out, image.height, image.width);
@@ -147,7 +146,7 @@ extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTe
 
 void getImage(const HANDLE &camera) {
   int stat = 0;
-  
+
   stat = xiSetParamInt(camera, XI_PRM_TRG_SOURCE, XI_TRG_SOFTWARE);
   HandleResult(stat,"xiSetParam (XI_PRM_TRG_SOURCE)");
 
@@ -201,14 +200,18 @@ extern "C" HANDLE openCamera(unsigned int camNum, XI_IMG_FORMAT color_mode) {
 
 
 // This opens two cameras with the given serial numbe. The first provided serial number
-// is connected to the first camera and the second serial number accordingly. So if you 
+// is connected to the first camera and the second serial number accordingly. So if you
 // call function getStereoImage the first image returned is the image of the camera
 // with the first provided serial number!
-extern "C" StereoHandle* openStereoCamerasBySerial(const char* serial_cam1, const char* serial_cam2, XI_IMG_FORMAT color_mode) {
+extern "C" StereoHandle *openStereoCamerasBySerial(
+  const char *serial_cam1,
+  const char *serial_cam2,
+  XI_IMG_FORMAT color_mode
+) {
   int nCams = 0;
   getNumberConnectedDevices(&nCams);
 
-  StereoHandle* handle = new StereoHandle();
+  StereoHandle *handle = new StereoHandle();
   handle->cam1 = NULL;
   handle->cam2 = NULL;
 
@@ -235,24 +238,27 @@ extern "C" StereoHandle* openStereoCamerasBySerial(const char* serial_cam1, cons
 }
 
 
-extern "C" StereoHandle* openStereoCamera(XI_IMG_FORMAT color_mode) 
-{
+extern "C" StereoHandle *openStereoCamera(XI_IMG_FORMAT color_mode) {
   int nCams = 0;
   getNumberConnectedDevices(&nCams);
   if (nCams < 2) {
     return NULL;
   }
 
-  StereoHandle* handle = new StereoHandle();
+  StereoHandle *handle = new StereoHandle();
 
   handle->cam1 = openCamera(0, color_mode);
   handle->cam2 = openCamera(1, color_mode);
-  return handle; 
+  return handle;
 }
 
 
-extern "C" bool getStereoImage(StereoHandle* handle, XI_IMG_FORMAT color_mode, THByteTensor* image1, THByteTensor* image2) 
-{
+extern "C" bool getStereoImage(
+  StereoHandle *handle,
+  XI_IMG_FORMAT color_mode,
+  THByteTensor *image1,
+  THByteTensor *image2
+) {
   bool cam1_ok = getSingleImage(handle->cam1, color_mode, image1);
   bool cam2_ok = getSingleImage(handle->cam2, color_mode, image2);
 
@@ -260,8 +266,8 @@ extern "C" bool getStereoImage(StereoHandle* handle, XI_IMG_FORMAT color_mode, T
 }
 
 
-extern "C" bool closeStereoCameras(StereoHandle* handle) {
-  if (handle == NULL) 
+extern "C" bool closeStereoCameras(StereoHandle *handle) {
+  if (handle == NULL)
     return false;
 
   closeDevice(handle->cam1);
@@ -286,24 +292,24 @@ extern "C" bool setExposure(HANDLE handle, int micro_sec)
 }
 
 
-extern "C" bool setExposureCam1(StereoHandle* handle, int micro_sec) {
+extern "C" bool setExposureCam1(StereoHandle *handle, int micro_sec) {
   return setExposure(handle->cam1, micro_sec);
 }
 
 
-extern "C" bool setExposureCam2(StereoHandle* handle, int micro_sec) {
+extern "C" bool setExposureCam2(StereoHandle *handle, int micro_sec) {
   return setExposure(handle->cam2, micro_sec);
 }
 
 
-extern "C" bool setExposureStereo(StereoHandle* handle, int micro_sec) {
+extern "C" bool setExposureStereo(StereoHandle *handle, int micro_sec) {
   bool cam1_ok = setExposure(handle->cam1, micro_sec);
   bool cam2_ok = setExposure(handle->cam2, micro_sec);
   return cam1_ok && cam2_ok;
 }
 
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 
   int stat = 0;
   DWORD numCams = 0;

@@ -3,18 +3,14 @@ local ximea = require 'ximea.env'
 
 local StereoCam = torch.class('ximea.StereoCam', ximea)
 
-function StereoCam:getImage()
-  local img_cam1
-  local img_cam2
+function StereoCam:__init()
+end
 
-  if self.mode == ffi.C.XI_MONO8 then
-    img_cam1 = torch.ByteTensor(0,0)
-    img_cam2 = torch.ByteTensor(0,0)
-  else 
-    img_cam1 = torch.ByteTensor(0,0,0)
-    img_cam2 = torch.ByteTensor(0,0,0)
-  end
-  if ximea.lib.getStereoImage(self.o, self.mode, img_cam1:cdata(), img_cam2:cdata()) then 
+function StereoCam:getImage()
+  local img_cam1 = torch.ByteTensor()
+  local img_cam2 = torch.ByteTensor()
+
+  if ximea.lib.getStereoImage(self.o, self.mode, img_cam1:cdata(), img_cam2:cdata()) then
     return img_cam1, img_cam2, true
   else
     return nil, nil, false
@@ -26,13 +22,13 @@ function StereoCam:setExposure(exposure_micro_sec)
 end
 
 function StereoCam:getNConnectedDevices()
-  local intPtr = ffi.typeof"int[1]"
+  local intPtr = ffi.typeof("int[1]")
   local n = intPtr()
   ximea.lib.getNumberConnectedDevices(n)
   return n[0]
 end
 
-function StereoCam:close() 
+function StereoCam:close()
   ximea.lib.closeStereoCameras(self.o)
   self.serial_cam1 = nil
   self.serial_cam2 = nil
@@ -51,7 +47,7 @@ function StereoCam:setExposureWithSerial(serial, micro_sec)
   return true
 end
 
-function StereoCam:openCameraWithSerial(serial_cam1, serial_cam2, mode) 
+function StereoCam:openCameraWithSerial(serial_cam1, serial_cam2, mode)
   self.mode = ffi.C.XI_MONO8
   if mode ~= nil and  mode == "RGB24" then
     self.mode = ffi.C.XI_RGB24
@@ -63,7 +59,7 @@ function StereoCam:openCameraWithSerial(serial_cam1, serial_cam2, mode)
     self.serial_cam2 = serial_cam2
   else
     return false
-  end  
+  end
 end
 
 function StereoCam:openCamera(mode)
@@ -76,7 +72,7 @@ function StereoCam:openCamera(mode)
   print(self.mode)
 
   self.o = ximea.lib.openStereoCamera(self.mode)
-  
+
   local serial_cam1 = ffi.new("char[32]")
   local serial_cam2 = ffi.new("char[32]")
   ximea.lib.getSerialsStereo(self.o, serial_cam1, serial_cam2);
@@ -86,9 +82,4 @@ function StereoCam:openCamera(mode)
 
   print(self.serial_cam1)
   print(self.serial_cam2)
-end
-
-function StereoCam:__init() 
-  self.serial_cam1 = nil
-  self.serial_cam2 = nil    
 end

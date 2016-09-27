@@ -36,7 +36,3 @@ end
 end
   print('Time elapsed for 1,000,000 sin: ' .. timer:time().real .. ' seconds')
 
- 
-
-
-
