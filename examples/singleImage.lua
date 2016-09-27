@@ -4,7 +4,7 @@ require 'cv.highgui'
 
 
 local serials = ximea.getSerialNumbers()
-for  i = 1, #serials do
+for i = 1, #serials do
   print("Cam " .. i-1 .. " has serial " .. serials[i])
 end
 
@@ -16,8 +16,6 @@ for i = 1, #serials do
   cv.waitKey{-1}
   cam1:close()
 end
-
-
 
 
 local b = ximea.SingleCam()
@@ -36,21 +34,17 @@ b:setExposure(exposure)
 timer = torch.Timer()
 
 for j = 1,3 do
-for i = 1,50 do
-  b:setExposure(exposure)
-  exposure = exposure + 1000
-  local image = b:getImage()
-  cv.imshow{"Image", image}
-  cv.waitKey{5}
-end
+  for i = 1,50 do
+    b:setExposure(exposure)
+    exposure = exposure + 1000
+    local image = b:getImage()
+    cv.imshow{"Image", image}
+    cv.waitKey{5}
+  end
+
   print("Close and open camera again")
   b:close()
   b:openCamera(n-1)
-
 end
-  print('Time elapsed for 1,000,000 sin: ' .. timer:time().real .. ' seconds')
 
- 
-
-
-
+print('Time elapsed: ' .. timer:time().real .. ' seconds')

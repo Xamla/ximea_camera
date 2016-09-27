@@ -1,7 +1,5 @@
 local ffi = require 'ffi'
-
 local ximea = require 'ximea.env'
-
 
 local StereoCam = torch.class('ximea.StereoCam', ximea)
 
@@ -51,7 +49,6 @@ function StereoCam:setExposureWithSerial(serial, micro_sec)
   end
 
   return true
-
 end
 
 function StereoCam:openCameraWithSerial(serial_cam1, serial_cam2, mode) 
@@ -70,13 +67,14 @@ function StereoCam:openCameraWithSerial(serial_cam1, serial_cam2, mode)
 end
 
 function StereoCam:openCamera(mode)
-  print("Open mode: ")
-
   self.mode = ffi.C.XI_MONO8
   if mode ~= nil and  mode == "RGB24" then
     self.mode = ffi.C.XI_RGB24
   end
+
+  print("Open mode: ")
   print(self.mode)
+
   self.o = ximea.lib.openStereoCamera(self.mode)
   
   local serial_cam1 = ffi.new("char[32]")
@@ -88,7 +86,6 @@ function StereoCam:openCamera(mode)
 
   print(self.serial_cam1)
   print(self.serial_cam2)
-
 end
 
 function StereoCam:__init() 
