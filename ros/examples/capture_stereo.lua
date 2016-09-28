@@ -1,22 +1,22 @@
-local ros = require 'ros'
+package.path = package.path .. ';../ximeaClient/?.lua'
 
+local ros = require 'ros'
+local image = require 'image'
+dofile '../ximea_client/ximeaClient.lua'
 ros.init('ximea_capture_demo')
 
 
 local nh = ros.NodeHandle()
 
-local capture = nh:serviceClient('ximea_stereo/capture', ros.SrvSpec('ximea_msgs/Capture'))
+local xc = ximeaClient(nh, "ximea_stereo")
 
-local timeout = ros.Duration(5)
-local ok = capture:waitForExistence(timeout)
-if not ok then
-  error('ximea_stereo ROS node not running.')
-end
-
-for i=1,10 do
+for i=1,1 do
   print('Capture frame ' .. i)
-  local response = capture:call({})
-  print(response)
+  img = xc:getImage(1)
+  if img then
+    print(img:size())
+    image.display(img)
+  end
 end
 
 ros.shutdown()
