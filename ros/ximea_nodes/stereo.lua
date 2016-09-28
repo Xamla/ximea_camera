@@ -77,7 +77,7 @@ local function createImageMessage(img, serial)
 
   msg.height = img:size(1)    -- image height
   msg.width = img:size(2)     -- image width
-  msg.encoding = "rgb8"       -- encoding of pixels -- channel meaning, ordering, size
+  msg.encoding = "bgr8"       -- encoding of pixels -- channel meaning, ordering, size
   msg.is_bigendian = false
   msg.step = img:stride(1)
   msg.data = img:reshape(img:size(1) * img:size(2) * img:size(3))   -- actual matrix data, size is (step * rows)
@@ -121,7 +121,7 @@ local COMMAND_HANDLER_TABLE = {
 
 
 local function handleSendCommand(request, response, header)
-  local args = string.split(request.command_name)
+  local args = string.split(request.command_name, ',')
   local cmd = table.remove(args, 1)
 
   local handler = COMMAND_HANDLER_TABLE[cmd]

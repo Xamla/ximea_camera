@@ -135,12 +135,21 @@ extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTe
   HandleResult(stat, "xiGetImage");
 
   if (stat == XI_OK) {
-    if (img_format == XI_MONO8) {
+    if (img_format == XI_MONO8 || img_format == XI_RAW8 ) {
       THByteTensor_resize2d(image_out, image.height, image.width);
-      memcpy(image_out->storage->data, image.bp, image.height * image.width * sizeof(char));
+      memcpy(image_out->storage->data, image.bp, image.height * image.width * sizeof(uint8_t));
+    } else if (img_format == XI_MONO16 || XI_RAW16) {
+      THByteTensor_resize3d(image_out, image.height, image.width, 2);
+      memcpy(image_out->storage->data, image.bp, image.height * image.width * sizeof(uint8_t) * 2);
     } else if (img_format == XI_RGB24) {
       THByteTensor_resize3d(image_out, image.height, image.width, 3);
-      memcpy(image_out->storage->data, image.bp, image.height * image.width * sizeof(char)*3);
+      memcpy(image_out->storage->data, image.bp, image.height * image.width * sizeof(uint8_t) * 3);
+    } else if (img_format == XI_RGB32) {
+      THByteTensor_resize3d(image_out, image.height, image.width, 4);
+      memcpy(image_out->storage->data, image.bp, image.height * image.width * sizeof(uint8_t) * 4);
+    }
+    else {
+      return false;     // unknown image format specified
     }
     return true;
   }
