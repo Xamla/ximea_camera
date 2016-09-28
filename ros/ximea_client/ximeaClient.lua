@@ -46,10 +46,10 @@ end
 
 
 function XC:setExposure(exposure_micro_sec)
-  local req = sendCommand:createRequest()
+  local req = self.sendCommand:createRequest()
   req.command_name = "setExposure";
   req.value = exposure_micro_sec
-  sendCommand:call(req)
+   self.sendCommand:call(req)
 end
 
 
