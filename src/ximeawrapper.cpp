@@ -10,15 +10,17 @@
 #define HandleResult(res,place) if (res != XI_OK) { printf("CameraXIMEA: Error at %s (%d)\n",place,res); fflush(stdout); }
 
 
-extern "C" {
-#include <TH/TH.h>
-}
-
-
 struct StereoHandle {
   HANDLE cam1;
   HANDLE cam2;
 };
+
+
+extern "C" {
+#include <TH/TH.h>
+
+bool closeStereoCameras(StereoHandle *handle);
+}
 
 
 extern "C" bool getSerialNumber(int camNum, char* serial) {
@@ -63,21 +65,21 @@ void initCam(unsigned int camNum, HANDLE &camera, XI_IMG_FORMAT color_fmt) {
 
   // Retrieve a handle to the camera device
   stat = xiOpenDevice(camNum, &camera);
-  HandleResult(stat,"xiOpenDevice");
+  HandleResult(stat, "xiOpenDevice");
 
   // Configure unsafe buffers (prevents old buffers, memory leak)
   xiSetParamInt(camera, XI_PRM_BUFFER_POLICY, XI_BP_UNSAFE);
 
   stat = xiSetParamInt(camera, XI_PRM_BUFFERS_QUEUE_SIZE, 10);
-  HandleResult(stat,"xiSetParam (XI_PRM_BUFFERS_QUEUE_SIZE)");
+  HandleResult(stat, "xiSetParam (XI_PRM_BUFFERS_QUEUE_SIZE)");
 
   // Configure queue mode (0 = next frame in queue, 1 = most recent frame)
   stat = xiSetParamInt(camera, XI_PRM_RECENT_FRAME, 1);
-  HandleResult(stat,"xiSetParam (XI_PRM_RECENT_FRAME)");
+  HandleResult(stat, "xiSetParam (XI_PRM_RECENT_FRAME)");
 
   // Configure image type
   stat = xiSetParamInt(camera, XI_PRM_IMAGE_DATA_FORMAT, color_fmt);
-  HandleResult(stat,"xiSetParam (XI_PRM_IMAGE_DATA_FORMAT)");
+  HandleResult(stat, "xiSetParam (XI_PRM_IMAGE_DATA_FORMAT)");
 
   xiSetParamFloat(camera, XI_PRM_GAMMAY, 1.0);
   xiSetParamInt(camera, XI_PRM_EXPOSURE, 32666);  // us
@@ -86,10 +88,10 @@ void initCam(unsigned int camNum, HANDLE &camera, XI_IMG_FORMAT color_fmt) {
   std::cout << "Exposure set" << std::endl;
 
   stat = xiSetParamInt(camera, XI_PRM_TRG_SOURCE, XI_TRG_SOFTWARE);
-  HandleResult(stat,"xiSetParam (XI_PRM_TRG_SOURCE)");
+  HandleResult(stat, "xiSetParam (XI_PRM_TRG_SOURCE)");
 
   stat = xiStartAcquisition(camera);
-  HandleResult(stat,"xiStartAcquisition");
+  HandleResult(stat, "xiStartAcquisition");
 }
 
 
@@ -111,8 +113,11 @@ extern "C" void getNumberConnectedDevices(int *n) {
 
 
 extern "C" bool getSerialsStereo(StereoHandle *handle, char *serial_cam1, char *serial_cam2) {
+  if (!handle)
+    return false;
   xiGetParamString(handle->cam1, XI_PRM_DEVICE_SN, serial_cam1, 20);
   xiGetParamString(handle->cam2, XI_PRM_DEVICE_SN, serial_cam2, 20);
+  return true;
 }
 
 
@@ -123,11 +128,11 @@ extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTe
   image.bp_size = 0;
 
   int stat = xiSetParamInt(camera, XI_PRM_TRG_SOFTWARE, 0);
-  HandleResult(stat,"xiSetParam (XI_PRM_TRG_SOFTWARE)");
+  HandleResult(stat, "xiSetParam (XI_PRM_TRG_SOFTWARE)");
 
   //Retrieve image from camera
   stat = xiGetImage(camera, 1000, &image);
-  HandleResult(stat,"xiGetImage");
+  HandleResult(stat, "xiGetImage");
 
   if (stat == XI_OK) {
     if (img_format == XI_MONO8) {
@@ -208,6 +213,7 @@ extern "C" StereoHandle *openStereoCamerasBySerial(
   const char *serial_cam2,
   XI_IMG_FORMAT color_mode
 ) {
+
   int nCams = 0;
   getNumberConnectedDevices(&nCams);
 
@@ -230,6 +236,7 @@ extern "C" StereoHandle *openStereoCamerasBySerial(
   }
 
   if (handle->cam1 == NULL || handle->cam2 == NULL) {
+    closeStereoCameras(handle);   // close device connection if any
     std::cout << "camera 1 or camera 2 not found! -> Cannot open Stero camera!" << std::endl;
     return NULL;
   }
@@ -259,6 +266,10 @@ extern "C" bool getStereoImage(
   THByteTensor *image1,
   THByteTensor *image2
 ) {
+  if (handle == NULL) {
+    return false;
+  }
+
   bool cam1_ok = getSingleImage(handle->cam1, color_mode, image1);
   bool cam2_ok = getSingleImage(handle->cam2, color_mode, image2);
 
@@ -270,9 +281,16 @@ extern "C" bool closeStereoCameras(StereoHandle *handle) {
   if (handle == NULL)
     return false;
 
-  closeDevice(handle->cam1);
-  closeDevice(handle->cam2);
+  if (handle->cam1) {
+    closeDevice(handle->cam1);
+    handle->cam1 = NULL;
+  }
+  if (handle->cam2) {
+    closeDevice(handle->cam2);
+    handle->cam2 = NULL;
+  }
 
+  delete handle;
   return true;
 }
 
@@ -286,7 +304,7 @@ extern "C" bool setExposure(HANDLE handle, int micro_sec)
   int stat = xiSetParamInt(handle, XI_PRM_EXPOSURE, micro_sec);   // us
   if (stat != XI_OK) {
     return false;
- }
+  }
 
  return true;
 }

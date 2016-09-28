@@ -1,17 +1,17 @@
 local ffi = require 'ffi'
 local ximea = require 'ximea.env'
 
-local XiMode = {
+local XI_IMG_FORMAT = {
   MONO8               = ffi.C.XI_MONO8,                 -- 8 bits per pixel
-  MONO16              = ffi.C.XI_MONO16                 -- 16 bits per pixel
-  RGB24               = ffi.C.XI_RGB24                  -- RGB data format
-  RGB32               = ffi.C.XI_RGB32                  -- RGBA data format
-  RGB_PLANAR          = ffi.C.XI_RGB_PLANAR             -- RGB planar data format
-  RAW8                = ffi.C.XI_RAW8                   -- 8 bits per pixel raw data from sensor
-  RAW16               = ffi.C.XI_RAW16                  -- 16 bits per pixel raw data from sensor
+  MONO16              = ffi.C.XI_MONO16,                -- 16 bits per pixel
+  RGB24               = ffi.C.XI_RGB24,                 -- RGB data format
+  RGB32               = ffi.C.XI_RGB32,                 -- RGBA data format
+  RGB_PLANAR          = ffi.C.XI_RGB_PLANAR,            -- RGB planar data format
+  RAW8                = ffi.C.XI_RAW8,                  -- 8 bits per pixel raw data from sensor
+  RAW16               = ffi.C.XI_RAW16,                 -- 16 bits per pixel raw data from sensor
   FRM_TRANSPORT_DATA  = ffi.C.XI_FRM_TRANSPORT_DATA     -- Data from transport layer (e.g. packed). Format see XI_PRM_TRANSPORT_PIXEL_FORMAT
 }
-ximea.XiMode = XiMode
+ximea.XI_IMG_FORMAT = XI_IMG_FORMAT
 
 function ximea.getNCameras()
   local intPtr = ffi.typeof("int[1]")
@@ -45,7 +45,7 @@ function ximea.getXiModeByName(mode_name)
   end
 
   -- lookup mode by name
-  local mode = XiMode[mode_name]
+  local mode = XI_IMG_FORMAT[mode_name]
   if mode == nil then
     error(string.format('Unknown Ximea camera mode "%s".', mode_name))
   end
