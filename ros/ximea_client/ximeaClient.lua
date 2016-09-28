@@ -14,7 +14,7 @@ function XC:__init(nodeHandle,mode)
 
 end
 
-function msg2image(m, serial)
+local function msg2image(m, serial)
   local img
   if m.encoding == "rgb8"  then
     img = torch.ByteTensor(3* m.width *m.height)
@@ -23,7 +23,7 @@ function msg2image(m, serial)
     img = img:transpose(1,3)
     img = img:transpose(2,3)
   elseif m.encoding == "bgr8" then
-    imgbgr = torch.ByteTensor(3* m.width *m.height)
+    local imgbgr = torch.ByteTensor(3* m.width *m.height)
     imgbgr:copy(m.data)
     imgbgr = imgbgr:reshape(m.height,m.width,3)--actual matrix data, size is (step * rows)
     img = torch.ByteTensor(m.height ,m.width, 3)
@@ -45,17 +45,31 @@ function msg2image(m, serial)
 end
 
 
+local function sendCommand(command_name, value)
+  local req = sendCommandClient:createRequest()
+  req.command_name = command_name
+  req.value = value or 0
+  sendCommandClient:call(req)
+end
+
+
 function XC:setExposure(exposure_micro_sec)
-  local req = self.sendCommand:createRequest()
-  req.command_name = "setExposure";
-  req.value = exposure_micro_sec
-   self.sendCommand:call(req)
+  sendCommand("setExposure", exposure_micro_sec)
+end
+
+
+function XC:open()
+  sendCommand("open")
+end
+
+
+function XC:close()
+  sendCommand("close")
 end
 
 
 function XC:getImage(index)
   local response = self.capture:call({})
-  print(response.images[1])
   return msg2image(response.images[index])
 end
 
