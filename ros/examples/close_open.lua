@@ -1,6 +1,6 @@
 local ros = require 'ros'
 
-ros.init('ximea_set_exposure')
+ros.init('ximea_close_open_demo')
 
 local nh = ros.NodeHandle()
 
@@ -13,16 +13,21 @@ local function sendCommand(command_name, value)
   sendCommandClient:call(req)
 end
 
-
-local function setExposure(exposure_micro_sec)
-  sendCommand("setExposure", exposure_micro_sec)
+local function closeCamera()
+  sendCommand("close")
 end
 
-local exposure = 16666
+local function openCamera()
+  sendCommand("open")
+end
+
 for i=1,10 do
-  print('Capture frame ' .. i)
-  setExposure(exposure + 80000)
-  exposure = exposure + 1000
+  print('press return to close')
+  io.read()
+  closeCamera()
+  print('press return to open')
+  io.read()
+  openCamera()
 end
 
 ros.shutdown()

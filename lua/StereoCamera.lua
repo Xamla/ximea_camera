@@ -54,6 +54,7 @@ function StereoCam:openCameraWithSerial(serial_cam1, serial_cam2, color_mode)
   local ptr = ximea.lib.openStereoCamerasBySerial(serial_cam1, serial_cam2, color_mode)
   if ptr ~= nil then
     self.o = ptr
+    self.color_mode = color_mode
     ffi.gc(self.o, ximea.lib.closeStereoCameras)        -- register finalizer to free handle
     self.serial_cam1 = serial_cam1
     self.serial_cam2 = serial_cam2
@@ -88,6 +89,10 @@ end
 
 function StereoCam:getSerials()
   return { self.serial_cam1, self.serial_cam2 }
+end
+
+function StereoCam:getColorMode()
+  return self.color_mode
 end
 
 function StereoCam:setExposure(exposure_micro_sec)

@@ -115,6 +115,8 @@ extern "C" void getNumberConnectedDevices(int *n) {
 extern "C" bool getSerialsStereo(StereoHandle *handle, char *serial_cam1, char *serial_cam2) {
   if (!handle)
     return false;
+  memset(serial_cam1, 0, sizeof(char[21]));
+  memset(serial_cam2, 0, sizeof(char[21]));
   xiGetParamString(handle->cam1, XI_PRM_DEVICE_SN, serial_cam1, 20);
   xiGetParamString(handle->cam2, XI_PRM_DEVICE_SN, serial_cam2, 20);
   return true;
@@ -138,7 +140,7 @@ extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTe
     if (img_format == XI_MONO8 || img_format == XI_RAW8 ) {
       THByteTensor_resize2d(image_out, image.height, image.width);
       memcpy(image_out->storage->data, image.bp, image.height * image.width * sizeof(uint8_t));
-    } else if (img_format == XI_MONO16 || XI_RAW16) {
+    } else if (img_format == XI_MONO16 || img_format == XI_RAW16) {
       THByteTensor_resize3d(image_out, image.height, image.width, 2);
       memcpy(image_out->storage->data, image.bp, image.height * image.width * sizeof(uint8_t) * 2);
     } else if (img_format == XI_RGB24) {
@@ -231,7 +233,7 @@ extern "C" StereoHandle *openStereoCamerasBySerial(
   handle->cam2 = NULL;
 
   for (size_t i = 0; i < nCams; i++) {
-    char serial[20];
+    char serial[20] = { 0 };
     int stat = xiGetDeviceInfoString(i, XI_PRM_DEVICE_SN, serial, 20);
     std::cout << "Camera "<< i <<" has serial number " << serial << std::endl;
     if (std::string(serial_cam1) == std::string(serial)) {
@@ -262,7 +264,6 @@ extern "C" StereoHandle *openStereoCamera(XI_IMG_FORMAT color_mode) {
   }
 
   StereoHandle *handle = new StereoHandle();
-
   handle->cam1 = openCamera(0, color_mode);
   handle->cam2 = openCamera(1, color_mode);
   return handle;

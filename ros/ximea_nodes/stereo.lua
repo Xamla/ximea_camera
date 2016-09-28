@@ -1,4 +1,5 @@
-local ros = require('ros')
+local ffi = require 'ffi'
+local ros = require 'ros'
 local ximea = require 'ximea'
 
 local NODE_NAME = 'ximea_stereo'
@@ -12,8 +13,8 @@ local image_spec = ros.MsgSpec('sensor_msgs/Image')
 local cameraInfo_spec = ros.MsgSpec('sensor_msgs/CameraInfo')
 local stereoPair_spec = ros.MsgSpec('ximea_msgs/StereoPair')
 local srvGetConnectedDevices, srvSendCommand, srvCapture
+local configuredSerialNumbers
 local stereoCam = ximea.StereoCam()
-local cameraOpen = false
 local stereo_topic
 local camera_topics = {}
 
@@ -28,12 +29,20 @@ local function parseCmdLine()
   cmd:text('ROS node for a stereo rig with Ximea cameras')
   cmd:text()
 
-  cmd:option('-mode', 'RGB24', 'default camera mode')
-  cmd:option('-serials', '', 'two camera serials separated by comma')
+  cmd:option('-mode', 'RGB24', 'The default camera mode.')
+  cmd:option('-serials', '', 'Two camera serials separated by comma.')
 
-  opt = cmd:parse({})
+  opt = cmd:parse(arg or {})
   print('Effective options:')
   print(opt)
+
+  if opt.serials ~= nil and #opt.serials > 1 then
+    local serials = string.split(opt.serials, ',')
+    if #serials ~= 2 then
+      error('Two camera serial numbers expected for stereo configuration.')
+    end
+    configuredSerialNumbers = serials
+  end
 end
 
 
@@ -59,7 +68,11 @@ end
 
 
 local function openCamera()
-  stereoCam:openCamera(opt.mode)
+  if configuredSerialNumbers ~= nil then
+    stereoCam:openCameraWithSerial(configuredSerialNumbers[1], configuredSerialNumbers[2], opt.mode)
+  else
+    stereoCam:openCamera(opt.mode)
+  end
   createPublishers()
 end
 
@@ -77,10 +90,20 @@ local function createImageMessage(img, serial)
 
   msg.height = img:size(1)    -- image height
   msg.width = img:size(2)     -- image width
-  msg.encoding = "bgr8"       -- encoding of pixels -- channel meaning, ordering, size
-  msg.is_bigendian = false
+
+  local color_mode = stereoCam:getColorMode()
+  if color_mode == ximea.XI_IMG_FORMAT.RGB24 then
+    msg.encoding = "bgr8"
+  elseif color_mode == ximea.XI_IMG_FORMAT.MONO8 or color_mode == ximea.XI_IMG_FORMAT.RAW8 then
+    msg.encoding = "mono8"
+  elseif color_mode == ximea.XI_IMG_FORMAT.MONO16 or color_mode == ximea.XI_IMG_FORMAT.RAW16 then
+    msg.encoding = "mono16"
+  else
+    error('Unsupported color format.')
+  end
   msg.step = img:stride(1)
   msg.data = img:reshape(img:size(1) * img:size(2) * img:size(3))   -- actual matrix data, size is (step * rows)
+  msg.is_bigendian = ffi.abi('be')
   return msg
 end
 
@@ -115,8 +138,8 @@ end
 
 local COMMAND_HANDLER_TABLE = {
   setExposure = function(args, value) stereoCam:setExposure(value) end,
-  close = function() stereoCam:close() end,
-  open = function() stereoCam:open() end
+  close = function() closeCamera() end,
+  open = function() openCamera() end
 }
 
 

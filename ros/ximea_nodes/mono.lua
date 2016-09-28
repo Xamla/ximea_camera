@@ -9,7 +9,6 @@ local cim = require 'CameraInfoManager'
 local imagePublisher
 local infoPublisher
 local camera
-local seqenceNumber = 1
 
 --[[ command line arguments ]]--
 cmd = torch.CmdLine()
@@ -43,7 +42,6 @@ spinner:start()
 
 
 local function generateHeader(header)
-  header.seq = seqenceNumber
   header.stamp = ros.Time.now()
   header.frame_id = opt.cameraName
   return header
@@ -113,7 +111,6 @@ local function run()
     sendImage(torch.Tensor(64,48,3):zero())
     ros.Duration(0.08):sleep()
     ros.spinOnce()
-    seqenceNumber = seqenceNumber +1
   end
 end
 
