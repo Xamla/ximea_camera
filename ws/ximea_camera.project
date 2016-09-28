@@ -16,6 +16,7 @@
     </VirtualDirectory>
     <VirtualDirectory Name="examples">
       <File Name="../ros/examples/capture_stereo.lua"/>
+      <File Name="../ros/examples/get_connected_devices.lua"/>
     </VirtualDirectory>
     <VirtualDirectory Name="ximea_nodes">
       <File Name="../ros/ximea_nodes/stereo.lua"/>

@@ -48,25 +48,17 @@ function StereoCam:setExposureWithSerial(serial, micro_sec)
 end
 
 function StereoCam:openCameraWithSerial(serial_cam1, serial_cam2, mode)
-  self.mode = ffi.C.XI_MONO8
-  if mode ~= nil and  mode == "RGB24" then
-    self.mode = ffi.C.XI_RGB24
-  end
-  local ptr = ximea.lib.openStereoCamerasBySerial(serial_cam1, serial_cam2, self.mode)
+  local ptr = ximea.lib.openStereoCamerasBySerial(serial_cam1, serial_cam2, mode)
   if ptr ~= nil then
     self.o = ptr
     self.serial_cam1 = serial_cam1
     self.serial_cam2 = serial_cam2
-  else
-    return false
   end
+  return ptr ~= nil
 end
 
 function StereoCam:openCamera(mode)
-  self.mode = ffi.C.XI_MONO8
-  if mode ~= nil and  mode == "RGB24" then
-    self.mode = ffi.C.XI_RGB24
-  end
+  self.mode = ximea.getXiModeByName(mode or 'MONO8')
 
   print("Open mode: ")
   print(self.mode)

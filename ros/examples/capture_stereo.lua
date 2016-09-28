@@ -11,6 +11,12 @@ local timeout = ros.Duration(5)
 local ok = captureClient:waitForExistence(timeout)
 if ok then
   local result = captureClient:call({})
+else
+  error('ximea_stereo ROS node not running.')
+end
+
+for i=1,10 do
+  --local capture:call()
 
 end
 

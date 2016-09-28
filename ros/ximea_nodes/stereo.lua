@@ -4,7 +4,6 @@ local ximea = require 'ximea'
 local NODE_NAME = 'ximea_stereo'
 local SLEEP_INTERVAL = 0.05
 
-
 local cv = require 'cv'
 require 'cv.highgui'
 
@@ -12,6 +11,24 @@ local nh, spinner
 local image_spec = ros.MsgSpec('sensor_msgs/Image')
 local cameraInfo_spec = ros.MsgSpec('sensor_msgs/CameraInfo')
 local srvGetConnectedDevices, srvSendCommand, srvCapture
+local stereoCam = ximea.StereoCam()
+
+
+cmd = torch.CmdLine()
+cmd:addTime()
+
+cmd:text()
+cmd:text('ROS node for a stereo rig with Ximea cameras')
+cmd:text()
+
+cmd:text('=== Training ===')
+cmd:option('-cfg', 'config/imagenet.lua', 'configuration file')
+
+
+local opt = {
+  local
+RGB24
+}
 
 
 local function initializeCameras()
@@ -30,14 +47,7 @@ end
 
 
 local function handleGetConnectedDevices(request, response, header)
-  print('request:')
-  print(request)
-  print('header:')
-  print(header)
-
-  print('response:')
-  print(response)
-
+  response.serials = ximea.getSerialNumbers()
   return true
 end
 
@@ -74,13 +84,18 @@ local function main()
 
   while ros.ok() do
     ros.spinOnce()
+
+    publishFrame()
+
     sys.sleep(SLEEP_INTERVAL)
   end
 
   print('shutting down...')
+
   shutdownServices()
   spinner:stop()
   ros.shutdown()
+
   print('bye.')
 end
 

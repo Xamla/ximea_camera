@@ -8,7 +8,7 @@ for i = 1, #serials do
   print("Cam " .. i-1 .. " has serial " .. serials[i])
 end
 
-for i = 1, #serials do 
+for i = 1, #serials do
   local cam1 = ximea.SingleCam()
   cam1:openCameraWithSerial(serials[i])
   local img = cam1:getImage()
@@ -21,8 +21,7 @@ end
 local b = ximea.SingleCam()
 local n = b:getNConnectedDevices()
 if n == 0 then
-  print("No camera connected!")
-  return
+  error("No camera connected!")
 else
   b:openCamera(n-1, "RGB24")
 end
