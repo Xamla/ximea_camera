@@ -22,6 +22,7 @@ target_link_libraries(Ximea ${OpenCV_LIBS})
 
 
 install(DIRECTORY "lua/" DESTINATION "${Torch_INSTALL_LUA_PATH_SUBDIR}/ximea" FILES_MATCHING PATTERN "*.lua")
+install(DIRECTORY "ros/ximea_client/" DESTINATION "${Torch_INSTALL_LUA_PATH_SUBDIR}/ximea/ros" FILES_MATCHING PATTERN "*.lua")
 
 install(TARGETS Ximea
         RUNTIME DESTINATION bin COMPONENT main

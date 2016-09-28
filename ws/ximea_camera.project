@@ -19,10 +19,19 @@
       <File Name="../ros/examples/get_connected_devices.lua"/>
       <File Name="../ros/examples/set_exposure.lua"/>
       <File Name="../ros/examples/close_open.lua"/>
+      <File Name="../ros/examples/ximea_client.lua"/>
     </VirtualDirectory>
     <VirtualDirectory Name="ximea_nodes">
       <File Name="../ros/ximea_nodes/stereo.lua"/>
       <File Name="../ros/ximea_nodes/mono.lua"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="ximea_client">
+      <File Name="../ros/ximea_client/XimeaClient.lua"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="ximea_client_cpp">
+      <File Name="../ros/ximea_client_cpp/CMakeLists.txt"/>
+      <File Name="../ros/ximea_client_cpp/reciever.h"/>
+      <File Name="../ros/ximea_client_cpp/reciever.cpp"/>
     </VirtualDirectory>
   </VirtualDirectory>
   <Description/>

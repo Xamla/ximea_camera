@@ -13,7 +13,6 @@ local function sendCommand(command_name, value)
   sendCommandClient:call(req)
 end
 
-
 local function setExposure(exposure_micro_sec)
   sendCommand("setExposure", exposure_micro_sec)
 end
