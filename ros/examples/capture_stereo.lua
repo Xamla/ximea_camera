@@ -9,13 +9,13 @@ ros.init('ximea_capture_demo')
 local nh = ros.NodeHandle()
 
 local xc = ximeaClient(nh, "ximea_stereo")
-
-for i=1,1 do
+xc:setExposure(366666)
+for i=1,10 do
   print('Capture frame ' .. i)
-  img = xc:getImage(1)
+  img = xc:getImage(2)
   if img then
     print(img:size())
-    image.display(img)
+    w = image.display{image=img, offscreen=false, win=w}
   end
 end
 
