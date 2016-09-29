@@ -68,22 +68,22 @@ local function sendCommand(self, command_name, value)
   local req = self.sendCommandClient:createRequest()
   req.command_name = command_name
   req.value = value or 0
-  sendCommandClient:call(req)
+  self.sendCommandClient:call(req)
 end
 
 
 function XimeaClient:setExposure(exposure_micro_sec)
-  self:sendCommand("setExposure", exposure_micro_sec)
+  sendCommand(self, "setExposure", exposure_micro_sec)
 end
 
 
 function XimeaClient:open()
-  selfsendCommand("open")
+  sendCommand(self, "open")
 end
 
 
 function XimeaClient:close()
-  selfsendCommand("close")
+  sendCommand(self, "close")
 end
 
 
