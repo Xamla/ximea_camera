@@ -60,6 +60,8 @@ add_message_files(
 add_service_files(
   FILES
   SendCommand.srv
+  Capture.srv
+  GetConnectedDevices.srv
 )
 
 ## Generate actions in the 'action' folder
