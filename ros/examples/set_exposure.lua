@@ -20,8 +20,8 @@ end
 local exposure = 16666
 for i=1,10 do
   print('Capture frame ' .. i)
-  setExposure(exposure + 80000)
-  exposure = exposure + 1000
+  setExposure(exposure * i)
+--  exposure = exposure + 1000
 end
 
 ros.shutdown()

@@ -120,10 +120,16 @@ end
 local function handleCapture(request, response, header)
   if stereoCam:isOpen() then
     local img1, img2 = stereoCam:getImage()
-    response.serials = stereoCam:getSerials()
-    response.images[1] = createImageMessage(img1, response.serials[1])
-    response.images[2] = createImageMessage(img2, response.serials[2])
-    return true
+    if img1 and img2 then
+      response.serials = stereoCam:getSerials()
+      response.images[1] = createImageMessage(img1, response.serials[1])
+      response.images[2] = createImageMessage(img2, response.serials[2])
+      return true
+    else
+      print("Capturing images failed.")
+    end
+  else
+    print("Camera is closed.")
   end
 
   return false
@@ -178,6 +184,11 @@ local function publishFrames()
   end
 
   local img1, img2 = stereoCam:getImage()
+  if img1 == nil or img2 == nil then
+    print('WARNING: Capturing images failed.')
+    return
+  end
+
   local serials = stereoCam:getSerials()
   local stereo_msg = createStereoPairMessage(img1, img2, serials)
 
