@@ -8,7 +8,7 @@ local nh = ros.NodeHandle()
 local xc = XimeaClient(nh)
 xc:setExposure(80000)
 
-for i=1,10 do
+--[[for i=1,10 do
   print('Capturing frame ' .. i)
   local img1, img2, serials = xc:getImages()
   print('Imgae 1 size:')
@@ -25,6 +25,8 @@ for i=1,10 do
     xc:setExposure(80000)
   end
 end
+--]]
+xc:close()
 
 xc:shutdown()
 
