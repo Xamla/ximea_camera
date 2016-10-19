@@ -16,7 +16,6 @@ function XimeaClient:__init(nodeHandle, mode, permute_channels, rgb_conversion)
   self.sendCommandClient = nodeHandle:serviceClient(string.format('%s/send_command',self.mode), ros.SrvSpec('ximea_msgs/SendCommand'))
   self.permute_channels = permute_channels or false
   self.rgb_conversion = rgb_conversion or true
-
   local timeout = ros.Duration(5)
   local ok = self.captureClient:waitForExistence(timeout) and self.sendCommandClient:waitForExistence(timeout)
   if not ok then
@@ -99,6 +98,9 @@ end
 
 
 function XimeaClient:getImages()
-  local response = self:capture()
+  local response = nil
+  while not response do
+    response = self:capture()
+  end
   return msg2image(self, response.images[1]), msg2image(self, response.images[2]), response.serials
 end
