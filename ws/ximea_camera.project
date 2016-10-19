@@ -20,10 +20,12 @@
       <File Name="../ros/examples/set_exposure.lua"/>
       <File Name="../ros/examples/close_open.lua"/>
       <File Name="../ros/examples/ximea_client.lua"/>
+      <File Name="../ros/examples/capture_mono.lua"/>
     </VirtualDirectory>
     <VirtualDirectory Name="ximea_nodes">
       <File Name="../ros/ximea_nodes/stereo.lua"/>
       <File Name="../ros/ximea_nodes/mono.lua"/>
+      <File Name="../ros/ximea_nodes/mono_new.lua"/>
     </VirtualDirectory>
     <VirtualDirectory Name="ximea_client">
       <File Name="../ros/ximea_client/XimeaClient.lua"/>

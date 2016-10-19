@@ -209,7 +209,7 @@ void getImage(const HANDLE &camera) {
 
 
 extern "C" HANDLE openCamera(unsigned int camNum, XI_IMG_FORMAT color_mode) {
-  HANDLE handle;
+  HANDLE handle = NULL;
   initCam(camNum, handle, color_mode);
   return handle;
 }

@@ -10,7 +10,7 @@ end
 
 function SingleCam:getImage()
   local img = torch.ByteTensor()
-  if not ximea.lib.getSingleImage(self.o, self.mode, img:cdata()) then
+  if not ximea.lib.getSingleImage(self.o, self.color_mode, img:cdata()) then
     return nil, false
   else
     return img, true
@@ -38,15 +38,36 @@ function SingleCam:openCameraWithSerial(serial, mode)
   end
 end
 
-function SingleCam:openCamera(number_of_device, mode)
-  self.mode = ximea.getXiModeByName(mode or DEFAULT_MODE)
+function SingleCam:openCamera(device_index, mode)
+  self.color_mode = ximea.getXiModeByName(mode or DEFAULT_MODE)
+  self.device_index = device_index or 0
 
   print('Open mode: ')
-  print(self.mode)
+  print(self.color_mode)
 
-  self.o = ximea.lib.openCamera(number_of_device, self.mode)
+  self.o = ximea.lib.openCamera(self.device_index, self.color_mode)
+
+  local c_str = ffi.new("char[32]")
+  ximea.lib.getSerialNumber(self.device_index, c_str)
+  self.serial = ffi.string(c_str)
+end
+
+function SingleCam:getColorMode()
+  return self.color_mode
+end
+
+function SingleCam:getSerial()
+  return self.serial
 end
 
 function SingleCam:close()
-  ximea.lib.closeDevice(self.o)
+  if self.o ~= nil then
+    ximea.lib.closeDevice(self.o)
+    self.o = nil
+  end
+  self.serial= nil
+end
+
+function SingleCam:isOpen()
+  return self.o ~= nil
 end
