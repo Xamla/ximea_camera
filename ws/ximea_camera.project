@@ -25,7 +25,8 @@
     <VirtualDirectory Name="ximea_nodes">
       <File Name="../ros/ximea_nodes/stereo.lua"/>
       <File Name="../ros/ximea_nodes/mono.lua"/>
-      <File Name="../ros/ximea_nodes/mono_new.lua"/>
+      <File Name="../ros/ximea_nodes/ximea_ros.lua"/>
+      <File Name="../ros/ximea_nodes/XimeaRosCam.lua"/>
     </VirtualDirectory>
     <VirtualDirectory Name="ximea_client">
       <File Name="../ros/ximea_client/XimeaClient.lua"/>

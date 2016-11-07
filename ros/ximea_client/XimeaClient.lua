@@ -31,6 +31,9 @@ end
 
 
 local function msg2image(self, m, serial)
+  if m == nil then
+     return nil
+  end
   local img
   if m.encoding == "rgb8"  then
     img = torch.ByteTensor(m.width * m.height * 3)

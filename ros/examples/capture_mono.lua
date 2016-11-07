@@ -25,6 +25,7 @@ for i=1,10 do
   local response = capture:call()
   local img = response.images[1].data
   if img then
+    print('Cam serial: ' .. response.serials[1])
     print(img:size())
   end
 end

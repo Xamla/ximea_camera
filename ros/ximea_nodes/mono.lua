@@ -1,19 +1,26 @@
-local ffi = require 'ffi'
 local ros = require 'ros'
 local ximea = require 'ximea'
+local xr = require 'ximea_ros'
+require 'XimeaRosCam'
+
 
 local NODE_NAME = 'ximea_mono'
 local MAX_FPS = 80
 
-
 local nh, spinner
-local image_spec = ros.MsgSpec('sensor_msgs/Image')
-local cameraInfo_spec = ros.MsgSpec('sensor_msgs/CameraInfo')
+local configuredSerialNumbers
 local srvSendCommand, srvCapture
-local camera = ximea.SingleCam()
-local camera_topic
-
+local cameras = {}
 local opt   -- command line options
+
+
+local function keys(t)
+  local l = {}
+  for k,_ in pairs(t) do
+    l[#l+1] = k
+  end
+  return l
+end
 
 
 local function parseCmdLine()
@@ -21,77 +28,58 @@ local function parseCmdLine()
   cmd:addTime()
 
   cmd:text()
-  cmd:text('ROS node for a single Ximea camera')
+  cmd:text('ROS node for a Ximea cameras (mono mode)')
   cmd:text()
 
   cmd:option('-mode', 'RGB24', 'The default camera mode.')
-  cmd:option('-serial', '', 'Camera serial number to use.')
+  cmd:option('-serials', '', 'Camera serial numbers (separated by comma).')
 
   opt = cmd:parse(arg or {})
   print('Effective options:')
   print(opt)
-end
 
-
-local function createImageMessage(img, serial)
-  local msg = ros.Message(image_spec)
-  msg.header.stamp = ros.Time.now()
-  msg.header.frame = serial
-
-  msg.height = img:size(1)    -- image height
-  msg.width = img:size(2)     -- image width
-
-  local color_mode = camera:getColorMode()
-  if color_mode == ximea.XI_IMG_FORMAT.RGB24 then
-    msg.encoding = "bgr8"
-  elseif color_mode == ximea.XI_IMG_FORMAT.MONO8 or color_mode == ximea.XI_IMG_FORMAT.RAW8 then
-    msg.encoding = "mono8"
-  elseif color_mode == ximea.XI_IMG_FORMAT.MONO16 or color_mode == ximea.XI_IMG_FORMAT.RAW16 then
-    msg.encoding = "mono16"
-  else
-    error('Unsupported color format.')
-  end
-  msg.step = img:stride(1)
-  msg.data = img:reshape(img:size(1) * img:size(2) * img:size(3))   -- actual matrix data, size is (step * rows)
-  msg.is_bigendian = ffi.abi('be')
-  return msg
-end
-
-
-local function shutdownPublisher()
-  if camera_topic ~= nil then
-    camera_topic:shutdown()
-    camera_topic = nil
+  if opt.serials ~= nil and #opt.serials > 1 then
+    local serials = string.split(opt.serials, ',')
+    configuredSerialNumbers = serials
   end
 end
 
 
-local function createPublisher()
-  shutdownPublisher()
-  camera_topic = nh:advertise(NODE_NAME .. '/image', image_spec, 1, false)
-end
-
-
-local function openCamera()
-  if opt.serial ~= nil and #opt.serial > 0 then
-    camera:openCameraWithSerial(opt.serial, opt.mode)
-  else
-    camera:openCamera(0, opt.mode)
+local function openCameras()
+  local serials = configuredSerialNumbers
+  if serial == nil then
+    serials = ximea.getSerialNumbers()     -- all cameras
   end
-  createPublisher()
+
+  for i,serial in ipairs(serials) do
+    cameras[serial] = xr.XimeaRosCam(nh, NODE_NAME, serial, opt.mode)
+  end
 end
 
 
-local function closeCamera()
-  shutdownPublisher()
-  camera:close()
+local function closeCameras()
+  for serial,cam in pairs(cameras) do
+    cam:close()
+    cameras[serial] = nil
+  end
 end
 
 
 local COMMAND_HANDLER_TABLE = {
-  setExposure = function(args, value) camera:setExposure(value) end,
-  close = function() closeCamera() end,
-  open = function() openCamera() end
+  setExposure = function(args, value, serials)
+    if serials == nil or #serials == 0 then
+      serials = keys(cameras)
+    end
+
+    for i,serial in ipairs(serials) do
+      local cam = cameras[serial]
+      if cam ~= nil then
+        cam:setExposure(value)
+      else
+        ros.WARN("[setExposure] Camera with serial '%s' not found.", serial)
+      end
+    end
+  end,
 }
 
 
@@ -107,51 +95,45 @@ local function handleSendCommand(request, response, header)
 
   local handler = COMMAND_HANDLER_TABLE[cmd]
   if handler ~= nil then
-    handler(args, request.value)
-    return true
+    local ok, err = pcall(function() handler(args, request.value, request.serials) end)
+    if ok then
+      response.response = 'ok'
+      return true
+    else
+      ros.WARN(err)
+      response.response = err
+      return false
+    end
   end
 
+  response.response = 'unknown command'
   return false
 end
 
 
 local function handleCapture(request, response, header)
-  if camera:isOpen() then
-    local img = camera:getImage()
-    if img then
-      response.serials = { camera:getSerial() }
-      response.images[1] = createImageMessage(img, response.serials[1])
-      return true
+  local serials = request.serials
+  if serial == nil or #serial == 0 then
+    serials = keys(cameras)
+  end
+
+  response.serials = {}
+  for i,serial in ipairs(serials) do
+    local cam = cameras[serial]
+    if cam ~= nil then
+      local img_msg = cam:capture()
+      if img_msg then
+        table.insert(response.serials, serial)
+        table.insert(response.images, img_msg)
+      else
+        ros.ERROR("Capturing image from camera with serial '%s' failed.", serial)
+      end
     else
-      print("Capturing image failed.")
+      ros.WARN("Camera with serial '%s' not found.", serial)
     end
-  else
-    print("Camera is closed.")
   end
 
-  return false
-end
-
-
-local function hasSubscribers()
-  return camera_topic ~= nil and camera_topic:getNumSubscribers() > 0
-end
-
-
-local function publishFrame()
-  if not hasSubscribers() then
-    return
-  end
-
-  local img = camera:getImage()
-  if img == nil then
-    print('WARNING: Capturing imagesfailed.')
-    return
-  end
-
-  local serial = camera:getSerial()
-  local msg = createImageMessage(img, serial)
-  camera_topic:publish(msg)
+  return true
 end
 
 
@@ -169,14 +151,20 @@ local function shutdownServices()
 end
 
 
+local function publishFrames()
+  for i,cam in ipairs(cameras) do
+    cam:publishFrame()
+  end
+end
+
+
 local function main()
   parseCmdLine()
 
   ros.init(NODE_NAME)
-
   nh = ros.NodeHandle()
 
-  openCamera()
+  openCameras()
 
   spinner = ros.AsyncSpinner()
   spinner:start()
@@ -196,13 +184,13 @@ local function main()
     end
 
     last_publish_time = ros.Time.now()
-    publishFrame()
+    publishFrames()
     collectgarbage()
   end
 
   print('shutting down...')
   shutdownServices()
-  closeCamera()
+  closeCameras()
   spinner:stop()
   ros.shutdown()
 
