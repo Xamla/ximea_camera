@@ -152,7 +152,7 @@ end
 
 
 local function publishFrames()
-  for i,cam in ipairs(cameras) do
+  for serial,cam in pairs(cameras) do
     cam:publishFrame()
   end
 end
