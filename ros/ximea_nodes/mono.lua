@@ -113,7 +113,7 @@ end
 
 local function handleCapture(request, response, header)
   local serials = request.serials
-  if serial == nil or #serial == 0 then
+  if serials == nil or #serials == 0 then
     serials = keys(cameras)
   end
 

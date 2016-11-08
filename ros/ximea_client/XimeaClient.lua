@@ -30,7 +30,7 @@ function XimeaClient:shutdown()
 end
 
 
-local function msg2image(self, m, serial)
+local function msg2image(self, m)
   if m == nil then
      return nil
   end
@@ -47,7 +47,7 @@ local function msg2image(self, m, serial)
     imgbgr:copy(m.data)
     imgbgr = imgbgr:reshape(m.height, m.width, 3) --actual matrix data, size is (step * rows)
     if self.rgb_conversion then
-      img = cv.cvtColor{imgbgr, nil, cv.COLOR_RGB2BGR}
+      img = cv.cvtColor{imgbgr, nil, cv.COLOR_BGR2RGB}
     else
       img = imgbgr
     end
@@ -66,26 +66,20 @@ local function msg2image(self, m, serial)
 end
 
 
-local function sendCommand(self, command_name, value)
+local function sendCommand(self, command_name, value, serials)
+  if type(serials) == 'string' then
+    serials = { serials }
+  end
   local req = self.sendCommandClient:createRequest()
   req.command_name = command_name
+  req.serials = serials or {}
   req.value = value or 0
   self.sendCommandClient:call(req)
 end
 
 
-function XimeaClient:setExposure(exposure_micro_sec)
-  sendCommand(self, "setExposure", exposure_micro_sec)
-end
-
-
-function XimeaClient:open()
-  sendCommand(self, "open")
-end
-
-
-function XimeaClient:close()
-  sendCommand(self, "close")
+function XimeaClient:setExposure(exposure_micro_sec, serials)
+  sendCommand(self, "setExposure", exposure_micro_sec, serials)
 end
 
 
@@ -95,15 +89,20 @@ function XimeaClient:getImage(index)
 end
 
 
-function XimeaClient:capture()
-  return self.captureClient:call()
+function XimeaClient:capture(serials)
+  local req = self.captureClient:createRequest()
+  if type(serials) == 'string' then
+    serials = { serials }
+  end
+  req.serials = serials or {}
+  return self.captureClient:call(req)
 end
 
 
-function XimeaClient:getImages()
+function XimeaClient:getImages(serials)
   local response = nil
   while not response do
-    response = self:capture()
+    response = self:capture(serials)
   end
   return msg2image(self, response.images[1]), msg2image(self, response.images[2]), response.serials
 end
