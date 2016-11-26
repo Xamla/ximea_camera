@@ -9,6 +9,7 @@ local MAX_FPS = 80
 
 local nh, spinner
 local configuredSerialNumbers
+local configuredModes = {}
 local srvSendCommand, srvCapture
 local cameras = {}
 local opt   -- command line options
@@ -31,8 +32,9 @@ local function parseCmdLine()
   cmd:text('ROS node for a Ximea cameras (mono mode)')
   cmd:text()
 
-  cmd:option('-mode', 'RGB24', 'The default camera mode.')
+  cmd:option('-mode', 'RGB24', 'The default camera mode (MONO8, MONO16, RGB24, RGB32, RAW8, RAW16).')
   cmd:option('-serials', '', 'Camera serial numbers (separated by comma).')
+  cmd:option('-modes', '', 'Camera modes corresponding to serials (separated by comma)')
 
   opt = cmd:parse(arg or {})
   print('Effective options:')
@@ -41,6 +43,10 @@ local function parseCmdLine()
   if opt.serials ~= nil and #opt.serials > 1 then
     local serials = string.split(opt.serials, ',')
     configuredSerialNumbers = serials
+  end
+  if opt.modes ~= nil and #opt.modes > 1 then
+    local modes = string.split(opt.modes, ',')
+    configuredModes = modes
   end
 end
 
@@ -52,7 +58,9 @@ local function openCameras()
   end
 
   for i,serial in ipairs(serials) do
-    cameras[serial] = xr.XimeaRosCam(nh, NODE_NAME, serial, opt.mode)
+    local mode = configuredModes[i] or opt.mode
+    local cam = xr.XimeaRosCam(nh, NODE_NAME, serial, mode)
+    cameras[serial] = cam
   end
 end
 
@@ -65,19 +73,42 @@ local function closeCameras()
 end
 
 
-local COMMAND_HANDLER_TABLE = {
-  setExposure = function(args, value, serials)
-    if serials == nil or #serials == 0 then
-      serials = keys(cameras)
+function selectCameras(serials, nonMeansAll)
+  if serials == nil or (#serials == 0 and nonMeansAll) then
+    serials = keys(cameras)
+  end
+  local l = {}  -- resulting list of cameras
+  for i,serial in ipairs(serials) do
+    local cam = cameras[serial]
+    if cam ~= nil then
+      l[#l+1] = cam
+    else
+      ros.WARN("Camera with serial '%s' not found.", serial)
     end
+  end
+  return l
+end
 
-    for i,serial in ipairs(serials) do
-      local cam = cameras[serial]
-      if cam ~= nil then
-        cam:setExposure(value)
-      else
-        ros.WARN("[setExposure] Camera with serial '%s' not found.", serial)
-      end
+
+local COMMAND_HANDLER_TABLE = {
+  setParamInt = function(args, value, serials)
+    for i,cam in ipairs(selectCameras(serials, true)) do
+      cam.camera:setParamInt(args[1], value)
+    end
+  end,
+  setParamFloat = function(args, value, serials)
+    for i,cam in ipairs(selectCameras(serials, true)) do
+      cam.camera:setParamFloat(args[1], value)
+    end
+  end,
+  setParamString = function(args, value, serials)
+    for i,cam in ipairs(selectCameras(serials, true)) do
+      cam.camera:setParamString(args[1], args[2])
+    end
+  end,
+  setExposure = function(args, value, serials)
+    for i,cam in ipairs(selectCameras(serials, true)) do
+      cam:setExposure(value)
     end
   end,
 }

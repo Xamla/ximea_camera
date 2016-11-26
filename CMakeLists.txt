@@ -13,7 +13,7 @@ include_directories("${PROJECT_SOURCE_DIR}/include" ${Torch_INSTALL_INCLUDE})
 include_directories("/opt/XIMEA/include/")
 
 
-link_libraries(m3api ${Torch_INSTALL_LIB} )
+link_libraries(Ximea m3api)
 
 add_library(Ximea SHARED src/ximeawrapper.cpp)
 #add_executable(XimeaReader src/ximeawrapper.cpp)

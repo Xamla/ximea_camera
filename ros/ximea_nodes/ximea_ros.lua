@@ -32,7 +32,7 @@ function ximea_ros.createImageMessage(img, serial, color_mode)
     error('Unsupported color format.')
   end
   msg.step = img:stride(1)
-  msg.data = img:reshape(img:size(1) * img:size(2) * img:size(3))   -- actual matrix data, size is (step * rows)
+  msg.data = img:reshape(img:nElement())   -- actual matrix data, size is (step * rows)
   msg.is_bigendian = ffi.abi('be')
   return msg
 end

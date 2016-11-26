@@ -6,7 +6,12 @@ local ximea_ros = require 'ximea_ros'
 local XimeaRosCam = torch.class('ximea_ros.XimeaRosCam', ximea_ros)
 
 
-function XimeaRosCam:__init(nh, ns, serial, mode)
+local DEFAULT_FLAGS = {
+  enableFPNCorrection = true
+}
+
+
+function XimeaRosCam:__init(nh, ns, serial, mode, flags)
   self.nh = nh
   self.camera = ximea.SingleCam()
   if type(serial) == 'number' then
@@ -19,6 +24,13 @@ function XimeaRosCam:__init(nh, ns, serial, mode)
 
   self.serial = self.camera:getSerial()
   self.camera_topic = nh:advertise(ns .. '/' .. self.camera:getSerial(), ximea_ros.image_spec, 1, false)
+  self.flags = flags or DEFAULT_FLAGS
+
+  if self.flags.enableFPNCorrection then
+    print('Enabling PFN correction')
+    local status,msg = self.camera:setParamInt(ximea.PARAM.XI_PRM_COLUMN_FPN_CORRECTION, 1)
+    print(msg)
+  end
 end
 
 

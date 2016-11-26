@@ -38,14 +38,14 @@ local function msg2image(self, m)
   if m.encoding == "rgb8"  then
     img = torch.ByteTensor(m.width * m.height * 3)
     img:copy(m.data)
-    img = img:reshape(m.height, m.width, 3)--actual matrix data, size is (step * rows)
+    img = img:reshape(m.height, m.width, 3)
     if self.permute_channels then
       img = img:permute(3,1,2)
     end
   elseif m.encoding == "bgr8" then
     local imgbgr = torch.ByteTensor(m.width * m.height * 3)
     imgbgr:copy(m.data)
-    imgbgr = imgbgr:reshape(m.height, m.width, 3) --actual matrix data, size is (step * rows)
+    imgbgr = imgbgr:reshape(m.height, m.width, 3)
     if self.rgb_conversion then
       img = cv.cvtColor{imgbgr, nil, cv.COLOR_BGR2RGB}
     else
@@ -55,9 +55,11 @@ local function msg2image(self, m)
       img = img:permute(3,1,2)
     end
   elseif m.encoding == "mono8" then
-    img = torch.ByteTensor(m.width * m.height * 2)
+    img = m.data:view(m.height, m.width)  -- directly return image without copying for max performance
+  elseif m.encoding == "mono16" then
+    img = torch.ByteTensor(m.width * m.height, 2)
     img:copy(m.data)
-    img = img:reshape(m.height, m.width, 2)--actual matrix data, size is (step * rows)
+    img = img:reshape(m.height, m.width, 2)
     if self.permute_channels then
       img = img:transpose(1,3)
     end
@@ -104,5 +106,5 @@ function XimeaClient:getImages(serials)
   while not response do
     response = self:capture(serials)
   end
-  return msg2image(self, response.images[1]), msg2image(self, response.images[2]), response.serials
+  return msg2image(self, response.images[1]), msg2image(self, response.images[2]), msg2image(self, response.images[3]), response.serials
 end
