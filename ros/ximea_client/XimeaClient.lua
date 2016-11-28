@@ -7,20 +7,33 @@ require 'cv.imgproc'
 local XimeaClient = torch.class('XimeaClient')
 
 
-function XimeaClient:__init(nodeHandle, mode, permute_channels, rgb_conversion)
+function XimeaClient:__init(nodeHandle, mode, permute_channels, rgb_conversion, persistent)
 
   nodeHandle = nodeHandle or ros.NodeHandle()
 
   self.mode = mode or "ximea_stereo"
-  self.captureClient = nodeHandle:serviceClient(string.format('%s/capture',self.mode), ros.SrvSpec('ximea_msgs/Capture'))
-  self.sendCommandClient = nodeHandle:serviceClient(string.format('%s/send_command',self.mode), ros.SrvSpec('ximea_msgs/SendCommand'))
+  local captureServiceName = string.format('%s/capture', self.mode)
+  local sendCommandServiceName = string.format('%s/send_command', self.mode)
+  self.captureClient = nodeHandle:serviceClient(captureServiceName, ros.SrvSpec('ximea_msgs/Capture'), persistent)
+  self.sendCommandClient = nodeHandle:serviceClient(sendCommandServiceName, ros.SrvSpec('ximea_msgs/SendCommand'), persistent)
   self.permute_channels = permute_channels or false
   self.rgb_conversion = rgb_conversion or true
+
   local timeout = ros.Duration(5)
   local ok = self.captureClient:waitForExistence(timeout) and self.sendCommandClient:waitForExistence(timeout)
   if not ok then
     error('ximea_stereo ROS node not running.')
   end
+  -- check if services are valid (e.g. persistent services might require reconnect when service initially was not available)
+  if not self.captureClient:isValid() then
+    self.captureClient:shutdown()
+    self.captureClient = nodeHandle:serviceClient(captureServiceName, ros.SrvSpec('ximea_msgs/Capture'), persistent)
+  end
+  if not self.sendCommandClient:isValid() then
+    self.sendCommandClient:shutdown()
+    self.sendCommandClient = nodeHandle:serviceClient(sendCommandServiceName, ros.SrvSpec('ximea_msgs/SendCommand'), persistent)
+  end
+  assert(self.captureClient:isValid() and self.sendCommandClient:isValid())
 end
 
 
