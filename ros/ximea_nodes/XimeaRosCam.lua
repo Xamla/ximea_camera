@@ -3,6 +3,9 @@ local ximea = require 'ximea'
 local ximea_ros = require 'ximea_ros'
 
 
+local XI_RET,XI_RET_TEXT = ximea.XI_RET, ximea.XI_RET_TEXT
+
+
 local XimeaRosCam = torch.class('ximea_ros.XimeaRosCam', ximea_ros)
 
 
@@ -11,13 +14,21 @@ local DEFAULT_FLAGS = {
 }
 
 
+local function XI_CHECK(status, msg)
+  if status ~= XI_RET.XI_OK then
+    ros.ERROR(msg)
+    error(msg)
+  end
+end
+
+
 function XimeaRosCam:__init(nh, ns, serial, mode, flags)
   self.nh = nh
   self.camera = ximea.SingleCam()
   if type(serial) == 'number' then
-    self.camera:open(serial, mode)    -- interpret serial arg as device_index
+    self.camera:open(serial, mode, false)    -- interpret serial arg as device_index
   elseif type(serial) == 'string' then
-    self.camera:openCameraWithSerial(serial, mode)
+    self.camera:openCameraWithSerial(serial, mode, false)
   else
     error('serial argument must be of type sring or number.')
   end
@@ -28,9 +39,11 @@ function XimeaRosCam:__init(nh, ns, serial, mode, flags)
 
   if self.flags.enableFPNCorrection then
     print('Enabling PFN correction')
-    local status,msg = self.camera:setParamInt(ximea.PARAM.XI_PRM_COLUMN_FPN_CORRECTION, 1)
-    print(msg)
+    XI_CHECK(self.camera:setParamInt(ximea.PARAM.XI_PRM_COLUMN_FPN_CORRECTION, 1))
+
   end
+
+  XI_CHECK(self.camera:startAcquisition())
 end
 
 

@@ -30,7 +30,7 @@ bool getStereoImage(StereoHandle *handle, XI_IMG_FORMAT color_mode, THByteTensor
 bool closeStereoCameras(StereoHandle *handle);
 bool setExposureStereo(StereoHandle *handle, int micro_sec);
 
-XI_HANDLE openCamera(unsigned int camNum, XI_IMG_FORMAT color_mode);
+XI_HANDLE openCamera(unsigned int camera_index, XI_IMG_FORMAT color_mode, bool start_acquisition);
 bool getSingleImage(XI_HANDLE handle, XI_IMG_FORMAT format,  THByteTensor *image_out);
 bool setExposure(XI_HANDLE handle, int micro_sec);
 void getNumberConnectedDevices(int *n);
@@ -144,6 +144,10 @@ XI_RETURN xiGetParamFloat(XI_HANDLE hDevice, const char* prm, float* val);
 XI_RETURN xiGetParamString(XI_HANDLE hDevice, const char* prm, void* val, DWORD size);
 XI_RETURN xiGetDeviceInfoInt(DWORD DevId, const char* prm, int* value);
 XI_RETURN xiGetDeviceInfoString(DWORD DevId, const char* prm, char* value, DWORD value_size);
+
+XI_RETURN xiStartAcquisition(XI_HANDLE hDevice);
+XI_RETURN xiStopAcquisition(XI_HANDLE hDevice);
+XI_RETURN xiGetNumberDevices(DWORD *pNumberDevices);
 ]]
 
 

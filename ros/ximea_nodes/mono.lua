@@ -5,7 +5,7 @@ require 'XimeaRosCam'
 
 
 local NODE_NAME = 'ximea_mono'
-local MAX_FPS = 80
+local MAX_FPS = 250
 
 local nh, spinner
 local configuredSerialNumbers
@@ -91,6 +91,16 @@ end
 
 
 local COMMAND_HANDLER_TABLE = {
+  startAcquisition = function(args, value, serials)
+    for i,cam in ipairs(selectCameras(serials, true)) do
+      cam.camera:startAcquisition()
+    end
+  end,
+  stopAcquisition = function(args, value, serials)
+    for i,cam in ipairs(selectCameras(serials, true)) do
+      cam.camera:stopAcquisition()
+    end
+  end,
   setParamInt = function(args, value, serials)
     for i,cam in ipairs(selectCameras(serials, true)) do
       cam.camera:setParamInt(args[1], value)

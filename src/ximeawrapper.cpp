@@ -45,7 +45,7 @@ void printCamList() {
 }
 
 
-void initCam(unsigned int camNum, HANDLE &camera, XI_IMG_FORMAT color_fmt) {
+void initCam(unsigned int camNum, HANDLE &camera, XI_IMG_FORMAT color_fmt, bool startAcquisition) {
 
   if (! (color_fmt == XI_MONO8 || color_fmt == XI_RGB24)) {
     std::cout << "Unsupported color format" << std::endl;
@@ -84,14 +84,17 @@ void initCam(unsigned int camNum, HANDLE &camera, XI_IMG_FORMAT color_fmt) {
   xiSetParamFloat(camera, XI_PRM_GAMMAY, 1.0);
   xiSetParamInt(camera, XI_PRM_EXPOSURE, 32666);  // us
   xiSetParamFloat(camera, XI_PRM_GAIN, 0);
+  xiSetParamInt(camera, XI_PRM_COLUMN_FPN_CORRECTION, 1);
 
   std::cout << "Exposure set" << std::endl;
 
   stat = xiSetParamInt(camera, XI_PRM_TRG_SOURCE, XI_TRG_SOFTWARE);
   HandleResult(stat, "xiSetParam (XI_PRM_TRG_SOURCE)");
 
-  stat = xiStartAcquisition(camera);
-  HandleResult(stat, "xiStartAcquisition");
+  if (startAcquisition) {
+    stat = xiStartAcquisition(camera);
+    HandleResult(stat, "xiStartAcquisition");
+  }
 }
 
 
@@ -208,9 +211,9 @@ void getImage(const HANDLE &camera) {
 }
 
 
-extern "C" HANDLE openCamera(unsigned int camNum, XI_IMG_FORMAT color_mode) {
+extern "C" HANDLE openCamera(unsigned int camera_index, XI_IMG_FORMAT color_mode, bool start_acquisition) {
   HANDLE handle = NULL;
-  initCam(camNum, handle, color_mode);
+  initCam(camera_index, handle, color_mode, start_acquisition);
   return handle;
 }
 
@@ -237,11 +240,11 @@ extern "C" StereoHandle *openStereoCamerasBySerial(
     int stat = xiGetDeviceInfoString(i, XI_PRM_DEVICE_SN, serial, 20);
     std::cout << "Camera "<< i <<" has serial number " << serial << std::endl;
     if (std::string(serial_cam1) == std::string(serial)) {
-      handle->cam1 = openCamera(i, color_mode);
+      handle->cam1 = openCamera(i, color_mode, true);
       std::cout << "Camera 1 found and opened" << std::endl;
     }
     if (std::string(serial_cam2) == std::string(serial)) {
-      handle->cam2 = openCamera(i, color_mode);
+      handle->cam2 = openCamera(i, color_mode, true);
       std::cout << "Camera 2 found and opened" << std::endl;
     }
   }
@@ -264,8 +267,8 @@ extern "C" StereoHandle *openStereoCamera(XI_IMG_FORMAT color_mode) {
   }
 
   StereoHandle *handle = new StereoHandle();
-  handle->cam1 = openCamera(0, color_mode);
-  handle->cam2 = openCamera(1, color_mode);
+  handle->cam1 = openCamera(0, color_mode, true);
+  handle->cam2 = openCamera(1, color_mode, true);
   return handle;
 }
 
@@ -336,7 +339,7 @@ extern "C" bool setExposureStereo(StereoHandle *handle, int micro_sec) {
   return cam1_ok && cam2_ok;
 }
 
-
+/*
 int main(int argc, char *argv[]) {
 
   int stat = 0;
@@ -348,23 +351,6 @@ int main(int argc, char *argv[]) {
   bool result = getSingleImage(cam_handle, XI_MONO8, NULL);
   std::cout << "Capturing image ok? " <<  result << std::endl;
 
-  /*
-
-  XI_RETURN stat = XI_OK;
-  DWORD numCams;
-  stat = xiGetNumberDevices(&numCams);
-
-  HANDLE cam_handle;
-
-  for (unsigned int i=0; i<numCams; i++) {
-    char name[20];
-    xiGetDeviceInfoString(i, XI_PRM_DEVICE_NAME, name, 20);
-    printf("%s\n",name);
-    initCam(i, cam_handle);
-    getImage(cam_handle);
-  }
-
-  */
-
   return 0;
 }
+*/
