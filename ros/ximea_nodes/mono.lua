@@ -10,7 +10,7 @@ local MAX_FPS = 250
 local nh, spinner
 local configuredSerialNumbers
 local configuredModes = {}
-local srvSendCommand, srvCapture
+local srvSendCommand, srvCapture, srvTrigger
 local cameras = {}
 local opt   -- command line options
 
@@ -183,10 +183,35 @@ local function handleCapture(request, response, header)
 end
 
 
+local function handleTrigger(request, response, header)
+  local camera = cameras[request.serial]
+  local frames
+
+  response.serial = request.serial
+  response.totalFrameCount = 0
+
+  if camera then
+    frames = camera:hardwareTriggeredCapture(request.frameCount, request.exposureTimeInMicroSeconds)
+  else
+    ros.WARN("Camera with serial '%s' not found.", request.serial)
+  end
+
+  if frames then
+    response.images = frames
+    response.totalFrameCount = #frames
+  else
+    ros.ERROR("Triggered capturing from camera with serial '%s' failed.", request.serial)
+  end
+
+  return true
+end
+
+
 local function startServices()
   srvGetConnectedDevices = nh:advertiseService(NODE_NAME .. '/get_connected_devices', ros.SrvSpec('ximea_msgs/GetConnectedDevices'), handleGetConnectedDevices)
   srvSendCommand = nh:advertiseService(NODE_NAME .. '/send_command', ros.SrvSpec('ximea_msgs/SendCommand'), handleSendCommand)
   srvCapture = nh:advertiseService(NODE_NAME .. '/capture', ros.SrvSpec('ximea_msgs/Capture'), handleCapture)
+  srvCapture = nh:advertiseService(NODE_NAME .. '/trigger', ros.SrvSpec('ximea_msgs/Trigger'), handleTrigger)
 end
 
 

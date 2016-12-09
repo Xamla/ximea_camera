@@ -126,14 +126,17 @@ extern "C" bool getSerialsStereo(StereoHandle *handle, char *serial_cam1, char *
 }
 
 
-extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTensor *image_out) {
+extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTensor *image_out, bool hw_triggered) {
   XI_IMG image;
   image.size = SIZE_XI_IMG_V2; // must be initialized
   image.bp = NULL;
   image.bp_size = 0;
 
-  int stat = xiSetParamInt(camera, XI_PRM_TRG_SOFTWARE, 0);
-  HandleResult(stat, "xiSetParam (XI_PRM_TRG_SOFTWARE)");
+  int stat = 0;
+  if (!hw_triggered) {
+    stat = xiSetParamInt(camera, XI_PRM_TRG_SOFTWARE, 0);
+    HandleResult(stat, "xiSetParam (XI_PRM_TRG_SOFTWARE)");
+  }
 
   //Retrieve image from camera
   stat = xiGetImage(camera, 1000, &image);
@@ -283,8 +286,8 @@ extern "C" bool getStereoImage(
     return false;
   }
 
-  bool cam1_ok = getSingleImage(handle->cam1, color_mode, image1);
-  bool cam2_ok = getSingleImage(handle->cam2, color_mode, image2);
+  bool cam1_ok = getSingleImage(handle->cam1, color_mode, image1, false);
+  bool cam2_ok = getSingleImage(handle->cam2, color_mode, image2, false);
 
   return cam1_ok && cam2_ok;
 }
@@ -348,7 +351,7 @@ int main(int argc, char *argv[]) {
 
   HANDLE cam_handle;
   cam_handle = openCamera(0, XI_MONO8);
-  bool result = getSingleImage(cam_handle, XI_MONO8, NULL);
+  bool result = getSingleImage(cam_handle, XI_MONO8, NULL, false);
   std::cout << "Capturing image ok? " <<  result << std::endl;
 
   return 0;

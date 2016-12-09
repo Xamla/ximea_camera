@@ -15,9 +15,10 @@ function SingleCam:__init()
 end
 
 
-function SingleCam:getImage()
+function SingleCam:getImage(hardwareTriggered)
   local img = torch.ByteTensor()
-  if not ximea.lib.getSingleImage(self.o, self.color_mode, img:cdata()) then
+  hardwareTriggered = hardwareTriggered or false
+  if not ximea.lib.getSingleImage(self.o, self.color_mode, img:cdata(), hardwareTriggered) then
     return nil, false
   else
     return img, true

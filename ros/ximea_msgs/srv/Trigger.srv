@@ -1,0 +1,7 @@
+string serial                         # serial number of camera to use
+int32 frameCount                      # number of frames that should be taken
+int32 exposureTimeInMicroSeconds      # exposure time in microseconds
+---
+string serial                         # serial numbers of cameras
+int32 totalFrameCount                 # number of frames that were taken
+sensor_msgs/Image[] images            # image data
