@@ -24,7 +24,7 @@ local function main()
   cmd:option('-cam', 'scan', 'camera name one of [board, scan, onboard], empty for all')
   cmd:option('-serial', '', 'serial number')
   cmd:option('-time', 20, 'time in ms')
-  cmd:option('frames', 24, 'number of frames')
+  cmd:option('-frames', 24, 'number of frames')
   local opt = cmd:parse(arg or {})
 
   local xc = XimeaClient(nh, 'ximea_mono', false, false)
