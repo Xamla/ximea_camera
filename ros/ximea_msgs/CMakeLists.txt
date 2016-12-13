@@ -62,6 +62,7 @@ add_service_files(
   SendCommand.srv
   Capture.srv
   GetConnectedDevices.srv
+  Trigger.srv
 )
 
 ## Generate actions in the 'action' folder
