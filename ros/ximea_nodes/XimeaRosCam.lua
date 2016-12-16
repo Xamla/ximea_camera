@@ -3,6 +3,10 @@ local ximea = require 'ximea'
 local ximea_ros = require 'ximea_ros'
 local ioboard = require 'IoBoard'
 
+local cv = require 'cv'
+require 'cv.imgcodecs'
+require 'cv.imgproc'
+require 'cv.calib3d'
 
 local XI_RET,XI_RET_TEXT = ximea.XI_RET, ximea.XI_RET_TEXT
 
@@ -66,7 +70,14 @@ function XimeaRosCam:capture(hardwareTriggered)
     return nil
   end
 
-  return ximea_ros.createImageMessage(img, self.serial, self.camera:getColorMode())
+  local rosMessage
+  if hardwareTriggered then
+    img = cv.cvtColor{img, code = cv.COLOR_BGR2GRAY}
+    rosMessage = ximea_ros.createImageMessage(img, self.serial, 0)
+  else
+    rosMessage = ximea_ros.createImageMessage(img, self.serial, self.camera:getColorMode())
+  end
+  return rosMessage
 end
 
 
