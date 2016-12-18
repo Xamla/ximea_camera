@@ -59,6 +59,11 @@ local function openCameras()
 
   for i,serial in ipairs(serials) do
     local mode = configuredModes[i] or opt.mode
+    print('hallo')
+    print(serial)
+    print(mode)
+
+
     local cam = xr.XimeaRosCam(nh, NODE_NAME, serial, mode)
     cameras[serial] = cam
   end

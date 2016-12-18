@@ -10,7 +10,8 @@ local XimeaRosCam = torch.class('ximea_ros.XimeaRosCam', ximea_ros)
 
 
 local DEFAULT_FLAGS = {
-  enableFPNCorrection = true
+  enableFPNCorrection = true,
+  autoWhiteBalance = true
 }
 
 
@@ -40,7 +41,11 @@ function XimeaRosCam:__init(nh, ns, serial, mode, flags)
   if self.flags.enableFPNCorrection then
     print('Enabling PFN correction')
     XI_CHECK(self.camera:setParamInt(ximea.PARAM.XI_PRM_COLUMN_FPN_CORRECTION, 1))
+  end
 
+  if self.flags.autoWhiteBalance and (mode == 'RGB24' or mode == 'RGB32') then
+    print('Enabling auto white-balance')
+    XI_CHECK(self.camera:setParamInt(ximea.PARAM.XI_PRM_AUTO_WB, 1))
   end
 
   XI_CHECK(self.camera:startAcquisition())
