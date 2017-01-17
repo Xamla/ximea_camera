@@ -9,6 +9,9 @@ local SET_TRIGGER_LOW = "io0.trigger = 0"
 local ACTIVATE_SQUARE_FREQUENCY = "io0.trigger = sim0.square"
 local SET_SQUARE_FREQUENCY = "sim0.freq = "
 
+IoBoard.LOW = false
+IoBoard.HIGH = true
+
 -- This function searches for devices in order to get possible paths for read/write
 -- Input:
 --  id_vendor - The vendor id of the desired device

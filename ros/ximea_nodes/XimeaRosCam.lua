@@ -153,6 +153,57 @@ end
 
 function XimeaRosCam:hardwareTriggeredCapture(numberOfFrames, exposureTimeInMicroSeconds)
   local t = torch.Timer()
+  print("[XimeaRosCam:hwTrigger] preparing for semi-auto hardware triggering")
+  ioboard.open()
+  ioboard.setTrigger(ioboard.LOW)
+
+  local XI_TRG_EDGE_RISING = 1
+  local XI_TRG_SOFTWARE = 3
+  local camera = self.camera
+  --camera:stopAcquisition()
+  --camera:setParamInt("trigger_source", XI_TRG_EDGE_RISING)
+  --camera:startAcquisition()
+
+  local frames = {}
+  local processingDelayInMicroSeconds = 1000
+  local waitForSeconds = (133333 - exposureTimeInMicroSeconds + processingDelayInMicroSeconds) / 1000000
+
+  for i = 1, numberOfFrames do
+    local last = t:time().real
+
+    ioboard.setTrigger(ioboard.HIGH)
+    --print("[XimeaRosCam:hwTrigger] wait for s:", waitForSeconds)
+    --sys.sleep(waitForSeconds)
+    local imageMessage = self:capture(false)
+    if i > 20 then -- fringe patterns are shown 133ms, because it takes the projector 400ms to load the next image
+      sys.sleep(waitForSeconds)
+    end
+    ioboard.setTrigger(ioboard.LOW)
+
+    if imageMessage then
+      table.insert(frames, imageMessage)
+    else
+      print("[XimeaRosCam:hwTrigger] ERR: missed frame!")
+    end
+
+    --camera:stopAcquisition()
+    --camera:setParamInt("trigger_source", XI_TRG_SOFTWARE)
+    --camera:startAcquisition()
+
+    print ("Retrieved " .. i .. " in " .. t:time().real - last)
+    last = t:time().real
+  end
+
+  ioboard.setTrigger(ioboard.HIGH)
+  ioboard.close()
+
+  print("[XimeaRosCam:hwTrigger] done in " .. t:time().real)
+  return frames
+end
+
+
+function XimeaRosCam:hardwareTriggeredCaptureFullAuto(numberOfFrames, exposureTimeInMicroSeconds)
+  local t = torch.Timer()
   self:startTrigger(numberOfFrames, exposureTimeInMicroSeconds)
 
   -- Retrieve frames from camera buffer
