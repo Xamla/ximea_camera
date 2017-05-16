@@ -1,3 +1,4 @@
+#!/usr/bin/env th
 local ffi = require 'ffi'
 local ros = require 'ros'
 local ximea = require 'ximea'

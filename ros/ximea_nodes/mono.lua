@@ -1,3 +1,4 @@
+#!/usr/bin/env th
 local ros = require 'ros'
 local ximea = require 'ximea'
 local xr = require 'ximea_ros'
