@@ -24,7 +24,7 @@ local opt   -- command line options
 local function ignoreRosParams(args)
     local rospattern = "__"
     local result = {}
-    for i,v in ipairs(args) do
+    for i,v in pairs(args) do
         if not string.match(v, rospattern) then
             result[i] = v
         end
