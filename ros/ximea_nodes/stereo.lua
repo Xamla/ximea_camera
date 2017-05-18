@@ -21,18 +21,22 @@ local camera_topics = {}
 
 local opt   -- command line options
 
-local function ignoreRosParams(args)
+local function seperateRosParams(args)
     local rospattern = "^__"
     local result = {}
+    local rosparam = {}
+    table.insert(rosparam,args[0])
     for i,v in pairs(args) do
         if not string.match(v, rospattern) then
             result[i] = v
+        else
+            table.insert(rosparam,v)
         end
     end
-    return result
+    return result,rosparam
 end
 
-local function parseCmdLine()
+local function parseCmdLine(args)
   cmd = torch.CmdLine()
   cmd:addTime()
 
@@ -42,7 +46,7 @@ local function parseCmdLine()
 
   cmd:option('-mode', 'RGB24', 'The default camera mode.')
   cmd:option('-serials', '', 'Two camera serials separated by comma.')
-  local args = ignoreRosParams(arg)
+
   opt = cmd:parse(args or {})
   print('Effective options:')
   print(opt)
@@ -233,10 +237,10 @@ end
 
 
 local function main()
-  parseCmdLine()
+  local args,rosparam = seperateRosParams(arg)
+  parseCmdLine(args)
 
-  ros.init(NODE_NAME)
-
+  ros.init(NODE_NAME,0,rosparam)
   nh = ros.NodeHandle()
 
   openCamera()
