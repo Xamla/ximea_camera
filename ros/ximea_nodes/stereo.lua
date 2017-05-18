@@ -21,6 +21,16 @@ local camera_topics = {}
 
 local opt   -- command line options
 
+local function ignoreRosParams(args)
+    local rospattern = "__"
+    local result = {}
+    for i,v in ipairs(args) do
+        if not string.match(v, rospattern) then
+            result[i] = v
+        end
+    end
+    return result
+end
 
 local function parseCmdLine()
   cmd = torch.CmdLine()
@@ -32,8 +42,8 @@ local function parseCmdLine()
 
   cmd:option('-mode', 'RGB24', 'The default camera mode.')
   cmd:option('-serials', '', 'Two camera serials separated by comma.')
-
-  opt = cmd:parse(arg or {})
+  local args = ignoreRosParams(arg)
+  opt = cmd:parse(args or {})
   print('Effective options:')
   print(opt)
 

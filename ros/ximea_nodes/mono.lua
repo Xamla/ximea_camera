@@ -24,6 +24,16 @@ local function keys(t)
   return l
 end
 
+local function ignoreRosParams(args)
+    local rospattern = "__"
+    local result = {}
+    for i,v in ipairs(args) do
+        if not string.match(v, rospattern) then
+            result[i] = v
+        end
+    end
+    return result
+end
 
 local function parseCmdLine()
   cmd = torch.CmdLine()
@@ -36,8 +46,8 @@ local function parseCmdLine()
   cmd:option('-mode', 'RGB24', 'The default camera mode (MONO8, MONO16, RGB24, RGB32, RAW8, RAW16).')
   cmd:option('-serials', '', 'Camera serial numbers (separated by comma).')
   cmd:option('-modes', '', 'Camera modes corresponding to serials (separated by comma)')
-
-  opt = cmd:parse(arg or {})
+  local args = ignoreRosParams()
+  opt = cmd:parse(args or {})
   print('Effective options:')
   print(opt)
 
