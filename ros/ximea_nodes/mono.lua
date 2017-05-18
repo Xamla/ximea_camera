@@ -25,7 +25,7 @@ local function keys(t)
 end
 
 local function ignoreRosParams(args)
-    local rospattern = "__"
+    local rospattern = "^__"
     local result = {}
     for i,v in pairs(args) do
         if not string.match(v, rospattern) then
