@@ -1,5 +1,6 @@
 #!/usr/bin/env th
 local ros = require 'ros'
+local xamal_sysmon = require 'xamla_sysmon'
 local ximea = require 'ximea'
 local xr = require 'ximea_ros'
 require 'XimeaRosCam'
@@ -8,7 +9,7 @@ require 'XimeaRosCam'
 local NODE_NAME = 'ximea_mono'
 local MAX_FPS = 250
 
-local nh, spinner
+local nh, spinner, heartbeat 
 local configuredSerialNumbers
 local configuredModes = {}
 local srvSendCommand, srvCapture, srvTrigger
@@ -24,20 +25,22 @@ local function keys(t)
   return l
 end
 
+
 local function seperateRosParams(args)
     local rospattern = "^__"
     local result = {}
     local rosparam = {}
-    table.insert(rosparam,args[0])
+    table.insert(rosparam, args[0])
     for i,v in pairs(args) do
         if not string.match(v, rospattern) then
             result[i] = v
         else
-            table.insert(rosparam,v)
+            table.insert(rosparam, v)
         end
     end
     return result,rosparam
 end
+
 
 local function parseCmdLine(args)
   cmd = torch.CmdLine()
@@ -52,6 +55,17 @@ local function parseCmdLine(args)
   cmd:option('-modes', '', 'Camera modes corresponding to serials (separated by comma)')
 
   opt = cmd:parse(args or {})
+
+  local overrideInputArguments = function (key, value, ok)
+    if ok == true  then
+      opt[key] = value
+    end
+  end
+
+  overrideInputArguments('mode', nh:getParamString('mode'))
+  overrideInputArguments('serials', nh:getParamString('serials'))
+  overrideInputArguments('modes', nh:getParamString('modes'))
+
   print('Effective options:')
   print(opt)
 
@@ -74,12 +88,7 @@ local function openCameras()
 
   for i,serial in ipairs(serials) do
     local mode = configuredModes[i] or opt.mode
-    print('hallo')
-    print(serial)
-    print(mode)
-
-
-    local cam = xr.XimeaRosCam(nh, NODE_NAME, serial, mode)
+    local cam = xr.XimeaRosCam(nh, serial, mode, {})
     cameras[serial] = cam
   end
 end
@@ -93,7 +102,7 @@ local function closeCameras()
 end
 
 
-function selectCameras(serials, nonMeansAll)
+local function selectCameras(serials, nonMeansAll)
   if serials == nil or (#serials == 0 and nonMeansAll) then
     serials = keys(cameras)
   end
@@ -223,10 +232,10 @@ end
 
 
 local function startServices()
-  srvGetConnectedDevices = nh:advertiseService(NODE_NAME .. '/get_connected_devices', ros.SrvSpec('ximea_msgs/GetConnectedDevices'), handleGetConnectedDevices)
-  srvSendCommand = nh:advertiseService(NODE_NAME .. '/send_command', ros.SrvSpec('ximea_msgs/SendCommand'), handleSendCommand)
-  srvCapture = nh:advertiseService(NODE_NAME .. '/capture', ros.SrvSpec('ximea_msgs/Capture'), handleCapture)
-  srvCapture = nh:advertiseService(NODE_NAME .. '/trigger', ros.SrvSpec('ximea_msgs/Trigger'), handleTrigger)
+  srvGetConnectedDevices = nh:advertiseService('get_connected_devices', ros.SrvSpec('ximea_msgs/GetConnectedDevices'), handleGetConnectedDevices)
+  srvSendCommand = nh:advertiseService('send_command', ros.SrvSpec('ximea_msgs/SendCommand'), handleSendCommand)
+  srvCapture = nh:advertiseService('capture', ros.SrvSpec('ximea_msgs/Capture'), handleCapture)
+  srvCapture = nh:advertiseService('trigger', ros.SrvSpec('ximea_msgs/Trigger'), handleTrigger)
 end
 
 
@@ -246,15 +255,19 @@ end
 
 local function main()
   local args,rosparam = seperateRosParams(arg)
-  parseCmdLine(args)
 
-  ros.init(NODE_NAME,0,rosparam)
-  nh = ros.NodeHandle()
+  ros.init(NODE_NAME, 0, rosparam)
+  nh = ros.NodeHandle('~')
+
+  parseCmdLine(args)
 
   openCameras()
 
   spinner = ros.AsyncSpinner()
   spinner:start()
+
+  heartbeat = xamal_sysmon.Heartbeat()
+  heartbeat:start(nh, 5)
 
   startServices()
 
@@ -262,6 +275,7 @@ local function main()
   local min_wait = 1/MAX_FPS
   local wait = ros.Duration()
   while ros.ok() do
+    heartbeat:publish()
     ros.spinOnce()
 
     local delta = ros.Time.now() - last_publish_time

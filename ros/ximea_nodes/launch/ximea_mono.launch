@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+  <node name="ximea_mono" pkg="ximea_nodes" type="mono.lua" cwd="node" output="screen">
+    
+    <param name="mode" type="str" value="RGB24" /> <!-- The default camera mode (MONO8, MONO16, RGB24, RGB32, RAW8, RAW16). -->
+    <!-- <param name="serials" type="str" value="" /> --> <!-- Camera serial numbers (separated by comma) -->
+    <!-- <param name="modes" type="str" value="" /> --> <!--Camera modes corresponding to serials (separated by comma)  -->
+    
+  </node>
+</launch>

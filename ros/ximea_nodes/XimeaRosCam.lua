@@ -28,7 +28,7 @@ local function XI_CHECK(status, msg)
 end
 
 
-function XimeaRosCam:__init(nh, ns, serial, mode, flags)
+function XimeaRosCam:__init(nh, serial, mode, flags)
   self.nh = nh
   self.camera = ximea.SingleCam()
   if type(serial) == 'number' then
@@ -40,7 +40,7 @@ function XimeaRosCam:__init(nh, ns, serial, mode, flags)
   end
 
   self.serial = self.camera:getSerial()
-  self.camera_topic = nh:advertise(ns .. '/' .. self.camera:getSerial(), ximea_ros.image_spec, 1, false)
+  self.camera_topic = nh:advertise(self.camera:getSerial(), ximea_ros.image_spec, 1, false)
   self.flags = flags or DEFAULT_FLAGS
 
   if self.flags.enableFPNCorrection then
