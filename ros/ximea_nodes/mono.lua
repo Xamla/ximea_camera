@@ -259,15 +259,15 @@ local function main()
   ros.init(NODE_NAME, 0, rosparam)
   nh = ros.NodeHandle('~')
 
+  heartbeat = xamal_sysmon.Heartbeat()
+  heartbeat:start(nh, 5)
+
   parseCmdLine(args)
 
   openCameras()
 
   spinner = ros.AsyncSpinner()
   spinner:start()
-
-  heartbeat = xamal_sysmon.Heartbeat()
-  heartbeat:start(nh, 5)
 
   startServices()
 
@@ -286,6 +286,7 @@ local function main()
 
     last_publish_time = ros.Time.now()
     publishFrames()
+    heartbeat:updateStatus(heartbeat.GO, "")
     collectgarbage()
   end
 
