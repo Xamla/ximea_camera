@@ -82,7 +82,7 @@ end
 
 local function openCameras()
   local serials = configuredSerialNumbers
-  if serial == nil then
+  if serials == nil or #serials == 0 then
     serials = ximea.getSerialNumbers()     -- all cameras
   end
 
