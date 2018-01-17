@@ -28,6 +28,16 @@ local function XI_CHECK(status, msg)
 end
 
 
+local function escapeRosName(s)
+  -- add undersore if s starts with number
+  if s:match('^[0-9]') then
+    s = '_' .. s
+  end
+  -- replace all non alpha-numeric chars with safe char
+  return string.gsub(s, "([^A-Za-z0-9_])", '_')
+end
+
+
 function XimeaRosCam:__init(nh, serial, mode, flags)
   self.nh = nh
   self.camera = ximea.SingleCam()
@@ -40,7 +50,7 @@ function XimeaRosCam:__init(nh, serial, mode, flags)
   end
 
   self.serial = self.camera:getSerial()
-  self.camera_topic = nh:advertise(self.camera:getSerial(), ximea_ros.image_spec, 1, false)
+  self.camera_topic = nh:advertise('SN_' .. escapeRosName(self.serial), ximea_ros.image_spec, 1, false)
   self.flags = flags or DEFAULT_FLAGS
 
   if self.flags.enableFPNCorrection then
@@ -53,6 +63,7 @@ function XimeaRosCam:__init(nh, serial, mode, flags)
     XI_CHECK(self.camera:setParamInt(ximea.PARAM.XI_PRM_AUTO_WB, 1))
   end
 
+  print('Start camera acquisition')
   XI_CHECK(self.camera:startAcquisition())
 end
 
