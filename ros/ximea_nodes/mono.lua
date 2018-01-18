@@ -215,7 +215,7 @@ local function handleTrigger(request, response, header)
   response.totalFrameCount = 0
 
   if camera then
-    frames = camera:hardwareTriggeredCapture(request.frameCount, request.exposureTimeInMicroSeconds)
+    frames = camera:hardwareTriggeredCaptureFullAuto(request.frameCount, request.exposureTimeInMicroSeconds)
   else
     ros.WARN("Camera with serial '%s' not found.", request.serial)
   end
