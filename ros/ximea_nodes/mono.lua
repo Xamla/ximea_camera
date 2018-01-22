@@ -1,20 +1,24 @@
 #!/usr/bin/env th
 local ros = require 'ros'
-local xamal_sysmon = require 'xamla_sysmon'
+local xamla_sysmon = require 'xamla_sysmon'
 local ximea = require 'ximea'
 local xr = require 'ximea_ros'
 require 'XimeaRosCam'
 
+require 'ros.actionlib.SimpleActionServer'
+local actionlib = ros.actionlib
 
 local NODE_NAME = 'ximea_mono'
 local MAX_FPS = 250
 
-local nh, spinner, heartbeat 
+local nh, spinner, heartbeat
 local configuredSerialNumbers
 local configuredModes = {}
 local srvSendCommand, srvCapture, srvTrigger
+local actionServer
 local cameras = {}
 local opt   -- command line options
+local goalState
 
 
 local function keys(t)
@@ -79,6 +83,18 @@ local function parseCmdLine(args)
   end
 end
 
+local function hasValue (tab, val)
+  if (tab == nil) then
+    return false
+  end
+  for index, value in ipairs(tab) do
+      if value == val then
+          return true
+      end
+  end
+
+  return false
+end
 
 local function openCameras()
   local serials = configuredSerialNumbers
@@ -230,12 +246,99 @@ local function handleTrigger(request, response, header)
   return true
 end
 
+local function sendFeedback(targetFrameCount, currentFrameCount, errorMessage)
+  local fb = goalState.handle:createFeeback()
+  fb.status = goalState.status
+  fb.serial = goalState.cameraSerial
+  fb.total_frame_count = targetFrameCount or 0
+  fb.number_of_taken_frames = currentFrameCount or 0
+  fb.error_message = errorMessage or ""
+  goalState.handle:publishFeedback(fb)
+end
+
+local function SimpleActionServer_onGoal(as)
+  ros.INFO("Received new goal")
+
+  local goal = as:acceptNewGoal()
+  print(goal)
+
+  if (goal == nil) then
+    ros.ERROR('Received goal is nil')
+    return
+  end
+
+  if not hasValue(configuredSerialNumbers, goal.goal.serial) then
+    ros.WARN("Received goal for unkown serial number %s. Aborting.", goal.goal.serial)
+    local r = as:createResult()
+    as:setAborted(r, 'Serial number ' .. goal.goal.serial .. ' not found')
+    return
+  end
+
+  local camera = cameras[goal.goal.serial]
+  if camera ~= nil then
+    goalState = {}
+    goalState.cameraSerial = goal.goal.serial
+    goalState.startTime = ros.Time.now()
+    goalState.timeOutInMs = goal.goal.timeout_in_ms
+    goalState.status = 0
+    goalState.handle = actionServer:getCurrentGoalHandle()
+    sendFeedback()
+    camera:startTrigger(goal.goal.frame_count, goal.goal.exposure_time_in_microseconds)
+    goalState.status = 1
+    local state = camera:getState()
+    sendFeedback(state.targetFrameCount, #state.frames)
+  else
+    ros.WARN('Camera %s not found', goal.goal.serial)
+  end
+end
+
+
+local function triggerWorker()
+  if goalState ~= nil then
+    local camera = cameras[goalState.cameraSerial]
+    local state = camera:getState()
+    if (state.mode == 1) then -- continuous mode
+      local time = ros.Time.now() - goalState.startTime
+      if goalState.timeOutInMs > 0 and time:toSec() * 1000 > goalState.timeOutInMs then
+        ros.WARN('Could not capture enough frames with camera %s in the given time. Aborting', goalState.cameraSerial)
+        local r = actionServer:createResult()
+        r.serial = goalState.cameraSerial
+        r.total_frame_count = 0
+        r.images = nil
+        actionServer:setAborted(r, 'Capturing timed out.')
+      else
+        if (#state.frames > 0 and #state.frames == state.targetFrameCount) then
+          ros.INFO('Completed trigger goal')
+          goalState.status = 2
+          sendFeedback(state.targetFrameCount, #state.frames)
+
+          local r = actionServer:createResult()
+          r.serial = goalState.cameraSerial
+          r.total_frame_count = #state.frames
+          r.images = state.frames
+          actionServer:setSucceeded(r, 'Captured ' .. #state.frames .. 'frames')
+
+          goalState = nil
+          camera:stopTrigger()
+        else
+          camera:checkForNewFrame()
+        end
+      end
+    else
+      ros.INFO('Cam in wrong mode')
+    end
+  end
+end
+
 
 local function startServices()
   srvGetConnectedDevices = nh:advertiseService('get_connected_devices', ros.SrvSpec('ximea_msgs/GetConnectedDevices'), handleGetConnectedDevices)
   srvSendCommand = nh:advertiseService('send_command', ros.SrvSpec('ximea_msgs/SendCommand'), handleSendCommand)
   srvCapture = nh:advertiseService('capture', ros.SrvSpec('ximea_msgs/Capture'), handleCapture)
-  srvCapture = nh:advertiseService('trigger', ros.SrvSpec('ximea_msgs/Trigger'), handleTrigger)
+  actionServer = actionlib.SimpleActionServer(nh, 'trigger', 'ximea_msgs/Trigger')
+  actionServer:registerGoalCallback(SimpleActionServer_onGoal)
+  actionServer:registerPreemptCallback(SimpleActionServer_onPreempt)
+  actionServer:start()
 end
 
 
@@ -243,6 +346,7 @@ local function shutdownServices()
   srvGetConnectedDevices:shutdown()
   srvSendCommand:shutdown()
   srvCapture:shutdown()
+  actionServer:shutdown()
 end
 
 
@@ -259,7 +363,7 @@ local function main()
   ros.init(NODE_NAME, 0, rosparam)
   nh = ros.NodeHandle('~')
 
-  heartbeat = xamal_sysmon.Heartbeat()
+  heartbeat = xamla_sysmon.Heartbeat()
   heartbeat:start(nh, 5)
 
   parseCmdLine(args)
@@ -274,6 +378,8 @@ local function main()
   local last_publish_time = ros.Time(0)
   local min_wait = 1/MAX_FPS
   local wait = ros.Duration()
+  ros.INFO('Set status to ' .. heartbeat.STARTING)
+  heartbeat:updateStatus(heartbeat.STARTING, "")
   while ros.ok() do
     heartbeat:publish()
     ros.spinOnce()
@@ -286,6 +392,7 @@ local function main()
 
     last_publish_time = ros.Time.now()
     publishFrames()
+    triggerWorker()
     heartbeat:updateStatus(heartbeat.GO, "")
     collectgarbage()
   end

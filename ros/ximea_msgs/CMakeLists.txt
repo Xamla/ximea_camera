@@ -62,14 +62,13 @@ add_service_files(
   SendCommand.srv
   Capture.srv
   GetConnectedDevices.srv
-  Trigger.srv
 )
 
 ## Generate actions in the 'action' folder
-#add_action_files(
-#  DIRECTORY action
-#  # FILES xyz.action
-#)
+add_action_files(
+  DIRECTORY action
+  FILES   Trigger.action
+)
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(

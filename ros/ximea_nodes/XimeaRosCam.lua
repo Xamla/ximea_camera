@@ -9,9 +9,11 @@ require 'cv.calib3d'
 
 local XI_RET,XI_RET_TEXT = ximea.XI_RET, ximea.XI_RET_TEXT
 
-
 local XimeaRosCam = torch.class('ximea_ros.XimeaRosCam', ximea_ros)
-
+local CaptureMode = {
+  continuous = 0,
+  triggered = 1
+}
 
 local DEFAULT_FLAGS = {
   enableFPNCorrection = true,
@@ -64,6 +66,12 @@ function XimeaRosCam:__init(nh, serial, mode, flags)
 
   print('Start camera acquisition')
   XI_CHECK(self.camera:startAcquisition())
+
+  self.state = {
+    mode = CaptureMode.continuous,
+    targetFrameCount = 0,
+    frames = {}
+  }
 end
 
 
@@ -72,9 +80,10 @@ function XimeaRosCam:hasSubscribers()
 end
 
 
-function XimeaRosCam:capture(hardwareTriggered)
+function XimeaRosCam:capture(hardwareTriggered, timeout)
   hardwareTriggered = hardwareTriggered or false
-  local img = self.camera:getImage(hardwareTriggered)
+  timeout = timeout or 1000
+  local img = self.camera:getImage(hardwareTriggered, timeout)
   if img == nil then
     ros.WARN('Capturing image faild (cam serial: %s)', self.serial)
     return nil
@@ -108,6 +117,10 @@ function XimeaRosCam:setExposure(value)
 end
 
 
+function XimeaRosCam:getState()
+  return self.state
+end
+
 function XimeaRosCam:close()
   if self.camera_topic ~= nil then
     self.camera_topic:shutdown()
@@ -133,10 +146,16 @@ function XimeaRosCam:startTrigger(numberOfFrames, exposureTimeInMicroSeconds)
   camera:setParamInt("gpi_mode", XI_GPI_TRIGGER)
   camera:setParamInt("trigger_source", XI_TRG_EDGE_RISING)
   --camera:setParamInt("acq_buffer_size", 6.5 * numberOfFrames + 50)
-  --camera:setParamInt("buffers_queue_size", numberOfFrames + 1)
+  camera:setParamInt("buffers_queue_size", numberOfFrames + 1)
   camera:setParamInt("recent_frame", 0)
+  print("[XimeaRosCam:hwTrigger] set exposure to " .. exposureTimeInMicroSeconds)
+  self:setExposure(exposureTimeInMicroSeconds)
   camera:startAcquisition()
-
+  self.state = {
+    mode = CaptureMode.triggered,
+    targetFrameCount = numberOfFrames,
+    frames = {}
+  }
 end
 
 
@@ -148,9 +167,14 @@ function XimeaRosCam:stopTrigger()
   camera:stopAcquisition()
   camera:setParamInt("trigger_source", XI_TRG_SOFTWARE)
   --camera:setParamInt("acq_buffer_size", 50)
-  --camera:setParamInt("buffers_queue_size", 4)
+  camera:setParamInt("buffers_queue_size", 4)
   camera:setParamInt("recent_frame", 1)
   camera:startAcquisition()
+  self.state = {
+    mode = CaptureMode.continuous,
+    targetFrameCount = 0,
+    frames = {}
+  }
 end
 
 
@@ -220,4 +244,14 @@ function XimeaRosCam:hardwareTriggeredCaptureFullAuto(numberOfFrames, exposureTi
   self:stopTrigger()
   print("[XimeaRosCam:hwTrigger] done in " .. t:time().real)
   return frames
+end
+
+
+function XimeaRosCam:checkForNewFrame()
+  ros.INFO('Check for frame')
+  local imageMessage = self:capture(true, 10)
+  if imageMessage and self.state.frames ~= nil then
+    table.insert(self.state.frames, imageMessage)
+    ros.INFO('Received frame #%d', #self.state.frames)
+  end
 end

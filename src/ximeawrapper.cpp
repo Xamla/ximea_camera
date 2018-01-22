@@ -126,7 +126,7 @@ extern "C" bool getSerialsStereo(StereoHandle *handle, char *serial_cam1, char *
 }
 
 
-extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTensor *image_out, bool hw_triggered) {
+extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTensor *image_out, bool hw_triggered, int timeout = 1000) {
   XI_IMG image;
   image.size = SIZE_XI_IMG_V2; // must be initialized
   image.bp = NULL;
@@ -139,7 +139,7 @@ extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTe
   }
 
   //Retrieve image from camera
-  stat = xiGetImage(camera, 1000, &image);
+  stat = xiGetImage(camera, timeout, &image);
   HandleResult(stat, "xiGetImage");
 
   if (stat == XI_OK) {
