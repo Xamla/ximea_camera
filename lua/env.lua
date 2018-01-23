@@ -31,7 +31,7 @@ bool closeStereoCameras(StereoHandle *handle);
 bool setExposureStereo(StereoHandle *handle, int micro_sec);
 
 XI_HANDLE openCamera(unsigned int camera_index, XI_IMG_FORMAT color_mode, bool start_acquisition);
-bool getSingleImage(XI_HANDLE handle, XI_IMG_FORMAT format,  THByteTensor *image_out, bool hw_triggered, int timeout = 1000);
+bool getSingleImage(XI_HANDLE handle, XI_IMG_FORMAT format,  THByteTensor *image_out, bool hw_triggered, int timeout);
 bool setExposure(XI_HANDLE handle, int micro_sec);
 void getNumberConnectedDevices(int *n);
 void closeDevice(XI_HANDLE handle);
