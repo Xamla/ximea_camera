@@ -85,7 +85,13 @@ function XimeaRosCam:capture(hardwareTriggered, timeout)
   timeout = timeout or 1000
   local img = self.camera:getImage(hardwareTriggered, timeout)
   if img == nil then
-    ros.WARN('Capturing image faild (cam serial: %s)', self.serial)
+    local b = -1
+    if hardwareTriggered == true then
+      b = 1
+    elseif hardwareTriggered == false then
+      b = 0
+    end
+    ros.WARN('Capturing image failed (cam serial: %s, hw trigger %d, timeout %d)', self.serial, b, timeout or -1)
     return nil
   end
 

@@ -297,15 +297,18 @@ local function triggerWorker()
   if goalState ~= nil then
     local camera = cameras[goalState.cameraSerial]
     local state = camera:getState()
-    if (state.mode == 1) then -- continuous mode
+    if (state.mode == 1) then -- trigger mode
       local time = ros.Time.now() - goalState.startTime
       if goalState.timeOutInMs > 0 and time:toSec() * 1000 > goalState.timeOutInMs then
         ros.WARN('Could not capture enough frames with camera %s in the given time. Aborting', goalState.cameraSerial)
         local r = actionServer:createResult()
         r.serial = goalState.cameraSerial
         r.total_frame_count = 0
-        r.images = nil
+        r.images = {}
         actionServer:setAborted(r, 'Capturing timed out.')
+
+        goalState = nil
+        camera:stopTrigger()
       else
         if (#state.frames > 0 and #state.frames == state.targetFrameCount) then
           ros.INFO('Completed trigger goal')
