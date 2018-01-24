@@ -14,16 +14,13 @@ function XimeaClient:__init(nodeHandle, mode, permute_channels, rgb_conversion, 
   self.mode = mode or "ximea_stereo"
   local captureServiceName = string.format('%s/capture', self.mode)
   local sendCommandServiceName = string.format('%s/send_command', self.mode)
-  local sendTriggerServiceName = string.format('%s/trigger', self.mode)
   self.captureClient = nodeHandle:serviceClient(captureServiceName, ros.SrvSpec('ximea_msgs/Capture'), persistent)
   self.sendCommandClient = nodeHandle:serviceClient(sendCommandServiceName, ros.SrvSpec('ximea_msgs/SendCommand'), persistent)
-  self.triggerClient = nodeHandle:serviceClient(sendTriggerServiceName, ros.SrvSpec('ximea_msgs/Trigger'), persistent)
   self.permute_channels = permute_channels or false
   self.rgb_conversion = rgb_conversion or true
 
   local timeout = ros.Duration(5)
-  local ok = self.captureClient:waitForExistence(timeout) and self.sendCommandClient:waitForExistence(timeout) and
-             self.triggerClient:waitForExistence(timeout)
+  local ok = self.captureClient:waitForExistence(timeout) and self.sendCommandClient:waitForExistence(timeout)
   if not ok then
     error('ximea_stereo ROS node not running.')
   end
@@ -36,18 +33,14 @@ function XimeaClient:__init(nodeHandle, mode, permute_channels, rgb_conversion, 
     self.sendCommandClient:shutdown()
     self.sendCommandClient = nodeHandle:serviceClient(sendTriggerServiceName, ros.SrvSpec('ximea_msgs/SendCommand'), persistent)
   end
-  if not self.triggerClient:isValid() then
-    self.triggerClient:shutdown()
-    self.triggerClient = nodeHandle:serviceClient(captureServiceName, ros.SrvSpec('ximea_msgs/Trigger'), persistent)
-  end
-  assert(self.captureClient:isValid() and self.sendCommandClient:isValid() and self.triggerClient:isValid())
+
+  assert(self.captureClient:isValid() and self.sendCommandClient:isValid())
 end
 
 
 function XimeaClient:shutdown()
   self.captureClient:shutdown()
   self.sendCommandClient:shutdown()
-  self.triggerClient:shutdown()
 end
 
 
@@ -123,17 +116,8 @@ end
 
 
 function XimeaClient:trigger(serial, numberOfFrames, exposureTimeInMicroSeconds)
-  local req = self.triggerClient:createRequest()
-
-  req.serial = serial or ""
-  req.frameCount = numberOfFrames or 0
-  req.exposureTimeInMicroSeconds = exposureTimeInMicroSeconds or 20000
-
-  local response = self.triggerClient:call(req)
+  ros.WARN("XimeaClient:trigger not implemented")
   local images = {}
-  for i = 1, response.totalFrameCount do
-    table.insert(images, msg2image(self, response.images[i]))
-  end
 
   return images
 end
