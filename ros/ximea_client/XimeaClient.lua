@@ -31,7 +31,7 @@ function XimeaClient:__init(nodeHandle, mode, permute_channels, rgb_conversion, 
   end
   if not self.sendCommandClient:isValid() then
     self.sendCommandClient:shutdown()
-    self.sendCommandClient = nodeHandle:serviceClient(sendTriggerServiceName, ros.SrvSpec('ximea_msgs/SendCommand'), persistent)
+    self.sendCommandClient = nodeHandle:serviceClient(sendCommandClient, ros.SrvSpec('ximea_msgs/SendCommand'), persistent)
   end
 
   assert(self.captureClient:isValid() and self.sendCommandClient:isValid())
