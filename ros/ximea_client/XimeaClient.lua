@@ -3,17 +3,32 @@ local ros = require 'ros'
 local cv = require 'cv'
 require 'cv.imgproc'
 
+require "ros.actionlib.SimpleActionClient"
+local actionlib = ros.actionlib
+
 
 local XimeaClient = torch.class('XimeaClient')
 
 
-function XimeaClient:__init(nodeHandle, mode, permute_channels, rgb_conversion, persistent)
+local function initializeActionClient(self, ximea_action_name, nodeHandle)
+  local action_spec = 'ximea_msgs/Trigger'
+  self.ximea_action_client = actionlib.SimpleActionClient(action_spec, ximea_action_name, nodeHandle)
+end
+
+
+function XimeaClient:__init(nodeHandle, mode, permute_channels, rgb_conversion, persistent, ximea_action_name)
 
   nodeHandle = nodeHandle or ros.NodeHandle()
 
   self.mode = mode or "ximea_stereo"
   local captureServiceName = string.format('%s/capture', self.mode)
   local sendCommandServiceName = string.format('%s/send_command', self.mode)
+
+  local ok, err = pcall(function() initializeActionClient(self, ximea_action_name, nodeHandle) end)
+  if not ok then
+    ros.ERROR('Initialization of ximea action client has failed: ' .. err)
+  end
+
   self.captureClient = nodeHandle:serviceClient(captureServiceName, ros.SrvSpec('ximea_msgs/Capture'), persistent)
   self.sendCommandClient = nodeHandle:serviceClient(sendCommandServiceName, ros.SrvSpec('ximea_msgs/SendCommand'), persistent)
   self.permute_channels = permute_channels or false
@@ -115,10 +130,32 @@ function XimeaClient:capture(serials)
 end
 
 
-function XimeaClient:trigger(serial, numberOfFrames, exposureTimeInMicroSeconds)
-  ros.WARN("XimeaClient:trigger not implemented")
+function XimeaClient:trigger(serial, numberOfFrames, exposureTimeInMicroSeconds, timeout)
   local images = {}
-
+  if self.ximea_action_client:waitForServer(ros.Duration(5.0)) then
+    local goal = self.ximea_action_client:createGoal()
+    goal.serial = serial or ""
+    goal.frame_count = numberOfFrames or 0
+    goal.exposure_time_in_microseconds = exposureTimeInMicroSeconds or 20000
+    goal.timeout_in_ms = timeout or ros.Duration(5.0)
+    self.ximea_action_client:sendGoal(goal)
+    local result = self.ximea_action_client:getResult()
+    local state = self.ximea_action_client:getState()
+    if state.status == 2 then
+      ros.INFO("Captured all frames")
+      for i = 1, result.total_frame_count do	
+        table.insert(images, msg2image(self, result.images[i]))	
+      end
+    elseif state.status == 0 then
+      ros.ERROR("Camera not ready")
+    elseif state.status == 1 then
+      ros.ERROR("Camera ready, wait for frames being triggered")
+    elseif state.status == -1 then
+      ros.ERROR("Error state with error message: %s", status.error_message)
+    end
+  else
+    ros.ERROR("Could not contact ximea action server")
+  end
   return images
 end
 
