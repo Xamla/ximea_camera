@@ -6,8 +6,13 @@ require 'cv.imgproc'
 require "ros.actionlib.SimpleActionClient"
 local actionlib = ros.actionlib
 
-
 local XimeaClient = torch.class('XimeaClient')
+XimeaClient.ERROR_TYPE = {
+  ACTION_CLIENT_TIMEOUT = "ACTION_CLIENT_TIMEOUT",
+  CAMERA_NOT_READY = "CAMERA_NOT_READY",
+  WAIT_FOR_FRAMES_BEING_TRIGGERED = "WAIT_FOR_FRAMES_BEING_TRIGGERED",
+  CAMERA_IN_ERROR_STATE = "CAMERA_IN_ERROR_STATE"
+}
 
 
 local function initializeActionClient(self, ximea_action_name, nodeHandle)
@@ -137,7 +142,7 @@ function XimeaClient:trigger(serial, numberOfFrames, exposureTimeInMicroSeconds,
     goal.serial = serial or ""
     goal.frame_count = numberOfFrames or 0
     goal.exposure_time_in_microseconds = exposureTimeInMicroSeconds or 20000
-    goal.timeout_in_ms = timeout or ros.Duration(5.0)
+    goal.timeout_in_ms = timeout or 5000
     self.ximea_action_client:sendGoal(goal)
     local result = self.ximea_action_client:getResult()
     local state = self.ximea_action_client:getState()
@@ -148,13 +153,17 @@ function XimeaClient:trigger(serial, numberOfFrames, exposureTimeInMicroSeconds,
       end
     elseif state.status == 0 then
       ros.ERROR("Camera not ready")
+      error(XimeaClient.ERROR_TYPE.CAMERA_NOT_READY)
     elseif state.status == 1 then
       ros.ERROR("Camera ready, wait for frames being triggered")
+      error(XimeaClient.ERROR_TYPE.WAIT_FOR_FRAMES_BEING_TRIGGERED)
     elseif state.status == -1 then
       ros.ERROR("Error state with error message: %s", status.error_message)
+      error(XimeaClient.ERROR_TYPE.CAMERA_IN_ERROR_STATE)
     end
   else
     ros.ERROR("Could not contact ximea action server")
+    error(XimeaClient.ERROR_TYPE.ACTION_CLIENT_TIMEOUT)
   end
   return images
 end
