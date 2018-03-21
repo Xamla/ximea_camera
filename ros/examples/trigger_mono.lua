@@ -38,7 +38,13 @@ local function main()
 
   if serial and opt.frames then
     local t = torch.Timer()
-    local images = xc:trigger(serial, opt.frames, opt.time * 1000)
+    local images
+    local ok, output = pcall(function() xc:trigger(serial, opt.frames, opt.time * 1000) end)
+    if ok then
+      images = output
+    else
+      error('Triggering failed. Error: ' .. output)
+    end
     print("Got " .. #images .. " images in " .. t:time().real)
     for i = 1, #images do
       cv.imwrite{"/tmp/" .. i .. ".jpg", images[i]}
