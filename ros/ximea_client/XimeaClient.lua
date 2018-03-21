@@ -8,10 +8,10 @@ local actionlib = ros.actionlib
 
 local XimeaClient = torch.class('XimeaClient')
 XimeaClient.ERROR_TYPE = {
-  ACTION_CLIENT_TIMEOUT = "ACTION_CLIENT_TIMEOUT",
-  CAMERA_NOT_READY = "CAMERA_NOT_READY",
-  WAIT_FOR_FRAMES_BEING_TRIGGERED = "WAIT_FOR_FRAMES_BEING_TRIGGERED",
-  CAMERA_IN_ERROR_STATE = "CAMERA_IN_ERROR_STATE"
+  ACTION_CLIENT_TIMEOUT = 3,
+  CAMERA_NOT_READY = 0,
+  WAIT_FOR_FRAMES_BEING_TRIGGERED = 1,
+  CAMERA_IN_ERROR_STATE = -1
 }
 
 
@@ -152,18 +152,15 @@ function XimeaClient:trigger(serial, numberOfFrames, exposureTimeInMicroSeconds,
         table.insert(images, msg2image(self, result.images[i]))	
       end
     elseif state.status == 0 then
-      ros.ERROR("Camera not ready")
-      error(XimeaClient.ERROR_TYPE.CAMERA_NOT_READY)
+      error({code=XimeaClient.ERROR_TYPE.CAMERA_NOT_READY, message='Camera not ready'})
     elseif state.status == 1 then
-      ros.ERROR("Camera ready, wait for frames being triggered")
-      error(XimeaClient.ERROR_TYPE.WAIT_FOR_FRAMES_BEING_TRIGGERED)
+      local status = {code=1, message='Camera ready, wait for frames being triggered'}
+      return status
     elseif state.status == -1 then
-      ros.ERROR("Error state with error message: %s", status.error_message)
-      error(XimeaClient.ERROR_TYPE.CAMERA_IN_ERROR_STATE)
+      error({code=XimeaClient.ERROR_TYPE.CAMERA_IN_ERROR_STATE, message=string.format('Error state with error message: %s', status.error_message)})
     end
   else
-    ros.ERROR("Could not contact ximea action server")
-    error(XimeaClient.ERROR_TYPE.ACTION_CLIENT_TIMEOUT)
+    error({code=XimeaClient.ERROR_TYPE.ACTION_CLIENT_TIMEOUT, message='Could not contact ximea action server'})
   end
   return images
 end
