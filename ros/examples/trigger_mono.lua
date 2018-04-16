@@ -26,7 +26,6 @@ local function main()
   cmd:option('-action_name', '/ximea_mono/trigger', 'ximea action name')
   local opt = cmd:parse(arg or {})
 
-  --local ximea_client = XimeaClient(nh, 'ximea_mono', false, false)
   local ximea_client = XimeaClient(nh, 'ximea_mono', false, false, nil, "/ximea_mono/trigger")
   local camera_serial = opt.serial
   local exposure = opt.exposure
