@@ -26,18 +26,14 @@ local function main()
   cmd:option('-action_name', '/ximea_mono/trigger', 'ximea action name')
   local opt = cmd:parse(arg or {})
 
-  local ximea_client = XimeaClient(nh, 'ximea_mono', false, false, nil, "/ximea_mono/trigger")
-  local camera_serial = opt.serial
-  local exposure = opt.exposure
-  ximea_client:setExposure(exposure, {camera_serial})
+  local ximea_client = XimeaClient(nh, 'ximea_mono', false, false, nil, opt.action_name)
+  ximea_client:setExposure(opt.exposure, {camera_serial})
 
   -- triggering test
   local t = torch.Timer()
   local images
   local output
-  local frames = opt.frames
-  local time = opt.time -- time in ms
-  local ok, err = pcall(function() output = ximea_client:trigger(camera_serial, frames, time * 1000) end)
+  local ok, err = pcall(function() output = ximea_client:trigger(opt.serial, opt.frames, opt.time * 1000) end)
   if ok then
     print('Triggering worked fine with output:')
     print(output)
