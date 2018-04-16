@@ -27,7 +27,7 @@ local function main()
   local opt = cmd:parse(arg or {})
 
   local ximea_client = XimeaClient(nh, 'ximea_mono', false, false, nil, opt.action_name)
-  ximea_client:setExposure(opt.exposure, {camera_serial})
+  ximea_client:setExposure(opt.exposure, {opt.serial})
 
   -- triggering test
   local t = torch.Timer()
