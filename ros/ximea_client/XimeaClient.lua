@@ -5,13 +5,14 @@ require 'cv.imgproc'
 
 require "ros.actionlib.SimpleActionClient"
 local actionlib = ros.actionlib
+local SimpleClientGoalState = actionlib.SimpleClientGoalState
 
 local XimeaClient = torch.class('XimeaClient')
 XimeaClient.ERROR_TYPE = {
-  ACTION_CLIENT_TIMEOUT = 3,
-  CAMERA_NOT_READY = 0,
-  WAIT_FOR_FRAMES_BEING_TRIGGERED = 1,
-  CAMERA_IN_ERROR_STATE = -1
+  ACTION_CLIENT_TIMEOUT = "ACTION_CLIENT_TIMEOUT",
+  ACTION_NOT_DONE = "ACTION_NOT_DONE",
+  NO_RESULT_RECEIVED = "NO_RESULT_RECEIVED",
+  UNKNOWN_ERROR = "UNKOWN_ERROR"
 }
 
 
@@ -143,21 +144,26 @@ function XimeaClient:trigger(serial, numberOfFrames, exposureTimeInMicroSeconds,
     goal.frame_count = numberOfFrames or 0
     goal.exposure_time_in_microseconds = exposureTimeInMicroSeconds or 20000
     goal.timeout_in_ms = timeout or 5000
-    self.ximea_action_client:sendGoal(goal)
+    self.ximea_action_client:sendGoalAndWait(goal, ros.Duration(5.0))
     local result = self.ximea_action_client:getResult()
     local state = self.ximea_action_client:getState()
-    if state.status == 2 then
-      ros.INFO("Captured all frames")
+    if state == 7 and result ~= nil then
+      ros.INFO("Captured all %d frames.", result.total_frame_count)
       for i = 1, result.total_frame_count do	
         table.insert(images, msg2image(self, result.images[i]))	
       end
-    elseif state.status == 0 then
-      error({code=XimeaClient.ERROR_TYPE.CAMERA_NOT_READY, message='Camera not ready'})
-    elseif state.status == 1 then
-      local status = {code=1, message='Camera ready, wait for frames being triggered'}
-      return status
-    elseif state.status == -1 then
-      error({code=XimeaClient.ERROR_TYPE.CAMERA_IN_ERROR_STATE, message=string.format('Error state with error message: %s', status.error_message)})
+    else
+      ros.ERROR("Could not capture all frames.")
+      if result == nil then
+        ros.ERROR("Result message from action server was empty.")
+        error(XimeaClient.ERROR_TYPE.NO_RESULT_RECEIVED)
+      elseif state ~= 7 then
+        ros.ERROR("Action has not been succeeded and is in state: %s", SimpleClientGoalState[state])
+        error(XimeaClient.ERROR_TYPE.ACTION_NOT_DONE)
+      else
+        ros.ERROR("An unkown error has ocurred.")
+        error(XimeaClient.ERROR_TYPE.UNKNOWN_ERROR)
+      end
     end
   else
     error({code=XimeaClient.ERROR_TYPE.ACTION_CLIENT_TIMEOUT, message='Could not contact ximea action server'})
