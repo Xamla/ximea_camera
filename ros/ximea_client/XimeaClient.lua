@@ -155,18 +155,15 @@ function XimeaClient:trigger(serial, numberOfFrames, exposureTimeInMicroSeconds,
     else
       ros.ERROR("Could not capture all frames.")
       if result == nil then
-        ros.ERROR("Result message from action server was empty.")
-        error(XimeaClient.ERROR_TYPE.NO_RESULT_RECEIVED)
+        error({code=XimeaClient.ERROR_TYPE.NO_RESULT_RECEIVED, message='Result message from action server was empty.'})
       elseif state ~= 7 then
-        ros.ERROR("Action has not been succeeded and is in state: %s", SimpleClientGoalState[state])
-        error(XimeaClient.ERROR_TYPE.ACTION_NOT_DONE)
+        error({code=XimeaClient.ERROR_TYPE.ACTION_NOT_DONE, message=string.format('Action has not been succeeded and is in state: %s', SimpleClientGoalState[state])})
       else
-        ros.ERROR("An unkown error has ocurred.")
-        error(XimeaClient.ERROR_TYPE.UNKNOWN_ERROR)
+        error({code=XimeaClient.ERROR_TYPE.UNKNOWN_ERROR, message='An unkown error has occured.'})
       end
     end
   else
-    error({code=XimeaClient.ERROR_TYPE.ACTION_CLIENT_TIMEOUT, message='Could not contact ximea action server'})
+    error({code=XimeaClient.ERROR_TYPE.ACTION_CLIENT_TIMEOUT, message='Could not contact ximea action server.'})
   end
   return images
 end
