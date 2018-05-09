@@ -249,7 +249,7 @@ end--]]
 
 local function sendFeedback(targetFrameCount, currentFrameCount, errorMessage)
   local fb = goal_state.handle:createFeeback()
-  fb.status = goal_state.status
+  fb.status = torch.Tensor({0, 0})
   fb.serials = goal_state.camera_serials
   fb.total_frame_count = targetFrameCount or 0
   fb.number_of_taken_frames = currentFrameCount or 0
