@@ -69,7 +69,7 @@ function XimeaRosCam:__init(nh, serial, mode, flags)
 
   self.state = {
     mode = CaptureMode.continuous,
-    targetFrameCount = 0,
+    target_frame_count = 0,
     frames = {}
   }
 end
@@ -159,7 +159,7 @@ function XimeaRosCam:startTrigger(numberOfFrames, exposureTimeInMicroSeconds)
   camera:startAcquisition()
   self.state = {
     mode = CaptureMode.triggered,
-    targetFrameCount = numberOfFrames,
+    target_frame_count = numberOfFrames,
     frames = {}
   }
 end
@@ -178,7 +178,7 @@ function XimeaRosCam:stopTrigger()
   camera:startAcquisition()
   self.state = {
     mode = CaptureMode.continuous,
-    targetFrameCount = 0,
+    target_frame_count = 0,
     frames = {}
   }
 end

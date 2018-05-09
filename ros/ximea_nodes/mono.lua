@@ -15,10 +15,10 @@ local nh, spinner, heartbeat
 local configuredSerialNumbers
 local configuredModes = {}
 local srvSendCommand, srvCapture, srvTrigger
-local actionServer
+local action_server
 local cameras = {}
 local opt   -- command line options
-local goalState
+local goal_state
 
 
 local function keys(t)
@@ -247,16 +247,16 @@ local function handleTrigger(request, response, header)
 end
 
 local function sendFeedback(targetFrameCount, currentFrameCount, errorMessage)
-  local fb = goalState.handle:createFeeback()
-  fb.status = goalState.status
-  fb.serial = goalState.cameraSerial
+  local fb = goal_state.handle:createFeeback()
+  fb.status = goal_state.status
+  fb.serials = goal_state.camera_serials
   fb.total_frame_count = targetFrameCount or 0
   fb.number_of_taken_frames = currentFrameCount or 0
   fb.error_message = errorMessage or ""
-  goalState.handle:publishFeedback(fb)
+  goal_state.handle:publishFeedback(fb)
 end
 
-local function SimpleActionServer_onGoal(as)
+local function handleNewTriggerGoal(as)
   ros.INFO("Received new goal")
 
   local goal = as:acceptNewGoal()
@@ -267,81 +267,120 @@ local function SimpleActionServer_onGoal(as)
     return
   end
 
-  if not hasValue(configuredSerialNumbers, goal.goal.serial) then
-    ros.WARN("Received goal for unkown serial number %s. Aborting.", goal.goal.serial)
-    local r = as:createResult()
-    as:setAborted(r, 'Serial number ' .. goal.goal.serial .. ' not found')
-    return
+  for key, serial in pairs(goal.goal.serials) do
+    if not hasValue(configuredSerialNumbers, serial) then
+      ros.WARN("Received goal for unkown serial number %s. Aborting.", goal.goal.serial)
+      local r = as:createResult()
+      as:setAborted(r, 'Serial number ' .. goal.goal.serial .. ' not found')
+      return
+    end
   end
 
-  local camera = cameras[goal.goal.serial]
-  if camera ~= nil then
-    goalState = {}
-    goalState.cameraSerial = goal.goal.serial
-    goalState.startTime = ros.Time.now()
-    goalState.timeOutInMs = goal.goal.timeout_in_ms
-    goalState.status = 0
-    goalState.handle = actionServer:getCurrentGoalHandle()
-    sendFeedback()
-    camera:startTrigger(goal.goal.frame_count, goal.goal.exposure_time_in_microseconds)
-    goalState.status = 1
-    local state = camera:getState()
-    sendFeedback(state.targetFrameCount, #state.frames)
-  else
-    ros.WARN('Camera %s not found', goal.goal.serial)
+  ros.INFO('Switch trigger modes of cameras to hardware')
+  goal_state = {}
+  goal_state.camera_serials = goal.goal.serials
+  goal_state.start_time = ros.Time.now()
+  goal_state.time_out_in_ms = goal.goal.timeout_in_ms
+  goal_state.status = 0
+  goal_state.handle = action_server:getCurrentGoalHandle()
+  sendFeedback()
+  for key, serial in pairs(goal.goal.serials) do
+    local camera = cameras[serial]
+    if camera ~= nil then
+      camera:startTrigger(goal.goal.frame_count, goal.goal.exposure_time_in_microseconds)
+    else
+      ros.WARN('Camera %s not found', goal.goal.serial)
+    end
   end
+  goal_state.status = 1
 end
 
 
 local function triggerWorker()
-  if goalState ~= nil then
-    local camera = cameras[goalState.cameraSerial]
-    local state = camera:getState()
-    if (state.mode == 1) then -- trigger mode
-      local time = ros.Time.now() - goalState.startTime
-      if goalState.timeOutInMs > 0 and time:toSec() * 1000 > goalState.timeOutInMs then
-        ros.WARN('Could not capture enough frames with camera %s in the given time. Aborting', goalState.cameraSerial)
-        local r = actionServer:createResult()
-        r.serial = goalState.cameraSerial
-        r.total_frame_count = 0
-        r.images = {}
-        actionServer:setAborted(r, 'Capturing timed out.')
-
-        goalState = nil
-        camera:stopTrigger()
-      else
-        if (#state.frames > 0 and #state.frames == state.targetFrameCount) then
-          ros.INFO('Completed trigger goal')
-          goalState.status = 2
-          sendFeedback(state.targetFrameCount, #state.frames)
-
-          local r = actionServer:createResult()
-          r.serial = goalState.cameraSerial
-          r.total_frame_count = #state.frames
-          r.images = state.frames
-          actionServer:setSucceeded(r, 'Captured ' .. #state.frames .. 'frames')
-
-          goalState = nil
-          camera:stopTrigger()
-        else
-          camera:checkForNewFrame()
-        end
-      end
+  if goal_state ~= nil then
+    local time = ros.Time.now() - goal_state.start_time
+    if goal_state.timeOutInMs > 0 and time:toSec() * 1000 > goal_state.time_out_in_ms then
+      handleTriggerTimeout()
     else
-      ros.INFO('Cam in wrong mode')
+      checkAllCamerasInGoalForNewFrames()
+      if isTriggerCompleted() then
+        handleTriggerCompleted()
+      end
     end
   end
 end
 
 
+local function handleTriggerTimeout()
+  local camera_serials = "";
+  for key, serial in pairs(goal_state.camera_serials) do
+    local camera = cameras[serial]
+    camera_serials = camera_serials + serial + ", "
+    if camera ~= nil then
+      camera:stopTrigger()
+    end
+  end
+
+  ros.WARN('Could not capture enough frames with cameras %s in the given time. Aborting', camera_serials)
+  local r = action_server:createResult()
+  r.serials = goal_state.camera_serials
+  r.total_frame_count = 0
+  r.images = {}
+  action_server:setAborted(r, 'Capturing timed out.')
+  goal_state = nil
+end
+
+
+local function handleTriggerCompleted()
+  ros.INFO('Completed trigger goal')
+  goal_state.status = 2
+  sendFeedback(state.target_frame_count, #state.frames)
+
+  local r = action_server:createResult()
+  r.serials = goal_state.camera_serials
+  r.total_frame_count = #state.frames
+  r.images = state.frames
+  action_server:setSucceeded(r, 'Captured ' .. #state.frames .. 'frames')
+
+  goal_state = nil
+  camera:stopTrigger()
+end
+
+
+local function checkAllCamerasInGoalForNewFrames()
+  local result_state = {}
+  for key, serial in pairs(goal_state.camera_serials) do
+    local camera = cameras[serial]
+    if camera ~= nil then
+      local state = camera:getState()
+      if (state.mode == 1) then -- trigger mode
+        camera:checkForNewFrame()
+      else
+        ros.ERROR('Camera %s in wrong mode', serial)
+      end
+    end
+  end
+end
+
+
+local function isTriggerCompleted()
+  local all_triggered_cameras_finished = true;
+  for key, serial in pairs(goal_state.camera_serials) do
+    if (not #state.frames > 0 or not #state.frames == state.target_frame_count) then
+      all_triggered_cameras_finished = false
+    end
+  end
+
+  return all_triggered_cameras_finished
+end
+
 local function startServices()
   srvGetConnectedDevices = nh:advertiseService('get_connected_devices', ros.SrvSpec('ximea_msgs/GetConnectedDevices'), handleGetConnectedDevices)
   srvSendCommand = nh:advertiseService('send_command', ros.SrvSpec('ximea_msgs/SendCommand'), handleSendCommand)
   srvCapture = nh:advertiseService('capture', ros.SrvSpec('ximea_msgs/Capture'), handleCapture)
-  actionServer = actionlib.SimpleActionServer(nh, 'trigger', 'ximea_msgs/Trigger')
-  actionServer:registerGoalCallback(SimpleActionServer_onGoal)
-  actionServer:registerPreemptCallback(SimpleActionServer_onPreempt)
-  actionServer:start()
+  action_server = actionlib.Simpleaction_server(nh, 'trigger', 'ximea_msgs/Trigger')
+  action_server:registerGoalCallback(handleNewTriggerGoal)
+  action_server:start()
 end
 
 
@@ -349,7 +388,7 @@ local function shutdownServices()
   srvGetConnectedDevices:shutdown()
   srvSendCommand:shutdown()
   srvCapture:shutdown()
-  actionServer:shutdown()
+  action_server:shutdown()
 end
 
 
