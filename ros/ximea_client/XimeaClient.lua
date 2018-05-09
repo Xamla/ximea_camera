@@ -136,21 +136,27 @@ function XimeaClient:capture(serials)
 end
 
 
-function XimeaClient:trigger(serial, numberOfFrames, exposureTimeInMicroSeconds, timeout)
+function XimeaClient:trigger(serials, numberOfFrames, exposureTimesInMicroSeconds, timeout)
   local images = {}
   if self.ximea_action_client:waitForServer(ros.Duration(5.0)) then
     local goal = self.ximea_action_client:createGoal()
-    goal.serial = serial or ""
+    goal.serials = serials or {}
     goal.frame_count = numberOfFrames or 0
-    goal.exposure_time_in_microseconds = exposureTimeInMicroSeconds or 20000
+    goal.exposure_times_in_microseconds = torch.Tensor(exposureTimesInMicroSeconds) or {}
     goal.timeout_in_ms = timeout or 5000
-    self.ximea_action_client:sendGoalAndWait(goal, ros.Duration(5.0))
+    print('goal', goal)
+    print('before wait')
+    local state = self.ximea_action_client:sendGoalAndWait(goal, ros.Duration(5.0))
     local result = self.ximea_action_client:getResult()
-    local state = self.ximea_action_client:getState()
+    print('after wait')
     if state == 7 and result ~= nil then
       ros.INFO("Captured all %d frames.", result.total_frame_count)
-      for i = 1, result.total_frame_count do	
-        table.insert(images, msg2image(self, result.images[i]))	
+      for key, _ in ipairs(serials) do
+        local images_per_camera = {}
+        for i = 1, result.images_all_cameras[key].frame_count do
+            table.insert(images_per_camera, msg2image(self, result.images_all_cameras[key].images[i]))
+        end
+        table.insert(images, images_per_camera)
       end
     else
       ros.ERROR("Could not capture all frames.")
