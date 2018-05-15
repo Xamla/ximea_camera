@@ -142,7 +142,7 @@ function XimeaClient:trigger(serials, numberOfFrames, exposureTimesInMicroSecond
     local goal = self.ximea_action_client:createGoal()
     goal.serials = serials or {}
     goal.frame_count = numberOfFrames or 0
-    goal.exposure_times_in_microseconds = torch.Tensor(exposureTimesInMicroSeconds) or {}
+    goal.exposure_times_in_microseconds = torch.IntTensor(exposureTimesInMicroSeconds) or {}
     goal.timeout_in_ms = timeout or 5000
     print('goal', goal)
     print('before wait')
