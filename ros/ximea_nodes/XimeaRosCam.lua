@@ -42,10 +42,13 @@ end
 function XimeaRosCam:__init(nh, serial, mode, flags)
   self.nh = nh
   self.camera = ximea.SingleCam()
+
+  local rate_limit = flags.rateLimit
+
   if type(serial) == 'number' then
-    self.camera:open(serial, mode, false)    -- interpret serial arg as device_index
+    self.camera:open(serial, mode, false, rate_limit)    -- interpret serial arg as device_index
   elseif type(serial) == 'string' then
-    self.camera:openCameraWithSerial(serial, mode, false)
+    self.camera:openCameraWithSerial(serial, mode, false, rate_limit)
   else
     error('serial argument must be of type sring or number.')
   end
@@ -69,7 +72,7 @@ function XimeaRosCam:__init(nh, serial, mode, flags)
 
   self.state = {
     mode = CaptureMode.continuous,
-    targetFrameCount = 0,
+    target_frame_count = 0,
     frames = {}
   }
 end
@@ -95,19 +98,17 @@ function XimeaRosCam:capture(hardwareTriggered, timeout)
     return nil
   end
 
-  local rosMessage
-  if hardwareTriggered then
-    --img = cv.cvtColor{img, code = cv.COLOR_BGR2GRAY}
-    rosMessage = ximea_ros.createImageMessage(img, self.serial, self.camera:getColorMode())
-  else
-    rosMessage = ximea_ros.createImageMessage(img, self.serial, self.camera:getColorMode())
-  end
+  local rosMessage = ximea_ros.createImageMessage(img, self.serial, self.camera:getColorMode())
   return rosMessage
 end
 
 
 function XimeaRosCam:publishFrame()
   if not self:hasSubscribers() then
+    return
+  end
+
+  if self.state.mode == CaptureMode.triggered then
     return
   end
 
@@ -142,24 +143,21 @@ end
 
 function XimeaRosCam:startTrigger(numberOfFrames, exposureTimeInMicroSeconds)
   -- Set camera into hardware triggered mode
-  print(string.format("[XimeaRosCam:hwTrigger] start hw triggering for cam %s", self.serial))
+  print(string.format("[XimeaRosCam:hwTrigger] start hw triggering for camera %s", self.serial))
   print("[XimeaRosCam:hwTrigger] re-configure camera")
   local XI_TRG_EDGE_RISING = 1
   local XI_GPI_TRIGGER = 1
   local camera = self.camera
-  camera:stopAcquisition()
   camera:setParamInt("gpi_selector", 1)
   camera:setParamInt("gpi_mode", XI_GPI_TRIGGER)
   camera:setParamInt("trigger_source", XI_TRG_EDGE_RISING)
-  --camera:setParamInt("acq_buffer_size", 6.5 * numberOfFrames + 50)
   camera:setParamInt("buffers_queue_size", numberOfFrames + 1)
   camera:setParamInt("recent_frame", 0)
   print("[XimeaRosCam:hwTrigger] set exposure to " .. exposureTimeInMicroSeconds)
   self:setExposure(exposureTimeInMicroSeconds)
-  camera:startAcquisition()
   self.state = {
     mode = CaptureMode.triggered,
-    targetFrameCount = numberOfFrames,
+    target_frame_count = numberOfFrames,
     frames = {}
   }
 end
@@ -170,15 +168,12 @@ function XimeaRosCam:stopTrigger()
   local XI_TRG_SOFTWARE = 3
   print("[XimeaRosCam:hwTrigger] hold triggering")
   local camera = self.camera
-  camera:stopAcquisition()
   camera:setParamInt("trigger_source", XI_TRG_SOFTWARE)
-  --camera:setParamInt("acq_buffer_size", 50)
   camera:setParamInt("buffers_queue_size", 4)
   camera:setParamInt("recent_frame", 1)
-  camera:startAcquisition()
   self.state = {
     mode = CaptureMode.continuous,
-    targetFrameCount = 0,
+    target_frame_count = 0,
     frames = {}
   }
 end
@@ -254,10 +249,10 @@ end
 
 
 function XimeaRosCam:checkForNewFrame()
-  ros.INFO('Check for frame')
-  local imageMessage = self:capture(true, 10)
+  --ros.INFO('[XimeaRosCam] Check for frame of camera: %s', self.serial)
+  local imageMessage = self:capture(true, 100)
   if imageMessage and self.state.frames ~= nil then
     table.insert(self.state.frames, imageMessage)
-    ros.INFO('Received frame #%d', #self.state.frames)
+    --ros.INFO('[XimeaRosCam] Received frame #%d from %s', #self.state.frames, self.serial)
   end
 end

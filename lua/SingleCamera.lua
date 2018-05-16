@@ -14,7 +14,6 @@ local DEFAULT_MODE = 'MONO8'
 function SingleCam:__init()
 end
 
-
 function SingleCam:getImage(hardwareTriggered, timeout)
   timeout = timeout or 1000
   local img = torch.ByteTensor()
@@ -40,18 +39,18 @@ function SingleCam:getNConnectedDevices()
 end
 
 
-function SingleCam:openCameraWithSerial(serial, mode, start_acquisition)
+function SingleCam:openCameraWithSerial(serial, mode, start_acquisition, rate_limit)
   local serials = ximea.getSerialNumbers()
   for i=1,#serials do
     if serials[i] == serial then
-      self:openCamera(i-1, mode, start_acquisition)
+      self:openCamera(i-1, mode, start_acquisition, rate_limit)
       return
     end
   end
 end
 
 
-function SingleCam:openCamera(device_index, mode, start_acquisition)
+function SingleCam:openCamera(device_index, mode, start_acquisition, rate_limit)
   self.color_mode = ximea.getXiModeByName(mode or DEFAULT_MODE)
   self.device_index = device_index or 0
 
@@ -67,6 +66,12 @@ function SingleCam:openCamera(device_index, mode, start_acquisition)
   local c_str = ffi.new("char[32]")
   ximea.lib.getSerialNumber(self.device_index, c_str)
   self.serial = ffi.string(c_str)
+
+  if rate_limit ~= nil then
+    print('[SingleCam] Set rate limit to ', rate_limit, self.serial, ximea.PARAM.XI_PRM_LIMIT_BANDWIDTH, rate_limit)
+    local status, status_text = self:setParamInt(ximea.PARAM.XI_PRM_LIMIT_BANDWIDTH, rate_limit)
+    print('[SingleCam] Result of rate limit xiApi call: ', status, status_text)
+  end
 end
 
 

@@ -1,17 +1,17 @@
 # Define the goal
-string serial                             # serial number of camera to use
-uint32 frame_count                        # number of frames that should be taken
-uint32 exposure_time_in_microseconds      # exposure time in microseconds
+string[] serials                          # serial numbers of cameras to use
+uint32 frame_count                        # number of frames that should be taken by each camera
+uint32[] exposure_times_in_microseconds   # exposure time in microseconds
 uint32 timeout_in_ms                      # time out in milliseconds. 0 for no time out
 ---
 # Define the result
-string serial                             # serial numbers of cameras
-uint32 total_frame_count                  # number of frames that were taken
-sensor_msgs/Image[] images                # image data
+string[] serials                           # serial numbers of cameras
+uint32 total_frame_count                   # number of frames captured by all cameras
+ximea_msgs/ImageArray[] images_all_cameras # image data
 ---
 # Define a feedback message
-int32 status                               # 0 - Camera not ready; 1 - Camera ready, wait for frames being triggered; 2 - Captured all frames; -1 - Error state
-string serial                             # serial numbers of cameras
+int32[] status                            # 0 - Camera not ready; 1 - Camera ready, wait for frames being triggered; 2 - Captured all frames; -1 - Error state
+string[] serials                          # serial numbers of cameras
 uint32 total_frame_count                  # number of frames that were requested
 uint32 number_of_taken_frames             # number of frames already taken
 string error_message                      # provides more details about an error
