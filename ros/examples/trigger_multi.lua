@@ -27,14 +27,14 @@ local function main()
   local opt = cmd:parse(arg or {})
 
   local ximea_client = XimeaClient(nh, 'ximea_mono', false, false, nil, opt.action_name)
-  local serials = {'CAMAU1710001'}
+  local serials = {'CAMAU1710001', 'CAMAU1639042'}
   ximea_client:setExposure(opt.exposure, serials)
 
   -- triggering test
   local image_set
   local output
 
-  local exposures = {20000}
+  local exposures = {20000, 20000}
   --for i = 1, 100 do
     local t = torch.Timer()
     local ok, err = pcall(function() output = ximea_client:trigger(serials, 24, exposures, 0) end)
