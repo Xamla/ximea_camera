@@ -10,7 +10,7 @@ description = {
   detailed = [[
   ]],
   homepage = "http://www.xamla.com/egomo/",
-  license = "BSD"
+  license = "GPLv3"
 }
 
 dependencies = {
@@ -20,7 +20,7 @@ dependencies = {
 build = {
 type = "command",
   build_command = [[
-  cmake -E make_directory build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$(PREFIX)" && $(MAKE) -j4 
+  cmake -E make_directory build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$(PREFIX)" && $(MAKE) -j4
   ]],
     install_command = "cd build && $(MAKE) install"
 }

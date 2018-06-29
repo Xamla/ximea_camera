@@ -1,4 +1,24 @@
 #!/usr/bin/env th
+
+--[[
+This file is part of the Xamla ROS node for Ximea cameras
+Copyright (C) 2018 Xamla and/or its affiliates
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+]]
+
 local ros = require 'ros'
 local xamla_sysmon = require 'xamla_sysmon'
 local ximea = require 'ximea'
@@ -268,7 +288,7 @@ local function sendFeedback(currentFrameCount, errorMessage)
     end
     table.insert(fb.serials, serial)
   end
-  
+
   fb.status = torch.IntTensor(status)
   fb.serials = goal_state.camera_serials
   fb.total_frame_count = goal_state.target_frame_count or 0
@@ -323,7 +343,7 @@ local function handleNewTriggerGoal(as)
   goal_state.handle = action_server:getCurrentGoalHandle()
   goal_state.last_frame_check = ros.Time.now()
   goal_state.last_feedback_publish = ros.Time.now()
-  goal_state.frame_check_interval = goal.goal.exposure_times_in_microseconds:min() 
+  goal_state.frame_check_interval = goal.goal.exposure_times_in_microseconds:min()
   goal_state.target_frame_count = goal.goal.frame_count
   sendFeedback()
 
@@ -343,7 +363,7 @@ end
 
 local function checkAllCamerasInGoalForNewFrames()
   local frame_count = 0
-  local time_since_last_check = ros.Time.now() - goal_state.last_frame_check 
+  local time_since_last_check = ros.Time.now() - goal_state.last_frame_check
   for key, serial in ipairs(goal_state.camera_serials) do
     local camera = cameras[serial]
     local state = camera:getState()
@@ -411,7 +431,7 @@ end
 local function handleTriggerCompleted()
   ros.INFO('Completed trigger goal')
   goal_state.status = 2
-  
+
 
   local r = action_server:createResult()
   r.serials = goal_state.camera_serials
