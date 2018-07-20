@@ -33,6 +33,7 @@ local DEFAULT_MODE = 'MONO8'
 function SingleCam:__init()
 end
 
+
 function SingleCam:getImage(hardwareTriggered, timeout)
   timeout = timeout or 1000
   local img = torch.ByteTensor()

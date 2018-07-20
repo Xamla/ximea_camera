@@ -41,6 +41,7 @@ local opt   -- command line options
 local goal_state
 local image_array_spec = ros.MsgSpec('ximea_msgs/ImageArray')
 
+
 local function keys(t)
   local l = {}
   for k,_ in pairs(t) do
@@ -103,6 +104,7 @@ local function parseCmdLine(args)
   end
 end
 
+
 local function hasValue (tab, val)
   if (tab == nil) then
     return false
@@ -115,6 +117,7 @@ local function hasValue (tab, val)
 
   return false
 end
+
 
 local function openCameras()
   local serials = configuredSerialNumbers
@@ -253,30 +256,6 @@ local function handleCapture(request, response, header)
 end
 
 
---[[ JN: Trigger Service does not exist anymore
-  local function handleTrigger(request, response, header)
-  local camera = cameras[request.serial]
-  local frames
-
-  response.serial = request.serial
-  response.totalFrameCount = 0
-
-  if camera then
-    frames = camera:hardwareTriggeredCaptureFullAuto(request.frameCount, request.exposureTimeInMicroSeconds)
-  else
-    ros.WARN("Camera with serial '%s' not found.", request.serial)
-  end
-
-  if frames then
-    response.images = frames
-    response.totalFrameCount = #frames
-  else
-    ros.ERROR("Triggered capturing from camera with serial '%s' failed.", request.serial)
-  end
-
-  return true
-end--]]
-
 local function sendFeedback(currentFrameCount, errorMessage)
   local fb = goal_state.handle:createFeeback()
   local status = {}
@@ -297,6 +276,7 @@ local function sendFeedback(currentFrameCount, errorMessage)
   fb.error_message = errorMessage or ""
   goal_state.handle:publishFeedback(fb)
 end
+
 
 local function handleNewTriggerGoal(as)
   ros.INFO("Received new goal")
@@ -416,6 +396,7 @@ local function stopTriggerOfAllCameras()
     end
   end
 end
+
 
 local function handleTriggerTimeout()
   stopTriggerOfAllCameras()

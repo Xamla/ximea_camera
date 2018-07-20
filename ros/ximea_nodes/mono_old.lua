@@ -20,7 +20,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 local ximea = require 'ximea'
 local cv = require 'cv'
 require 'cv.highgui'
-local ros = require('ros')
+local ros = require 'ros'
+
 ros.init('Ximea')
 
 local cim = require 'CameraInfoManager'
@@ -65,6 +66,7 @@ local function generateHeader(header)
   header.frame_id = opt.cameraName
   return header
 end
+
 
 local function sendImage(img)
   local m = ros.Message(image_spec)
@@ -115,6 +117,7 @@ local function init()
   end
 end
 
+
 local function run()
   init()
   print("Finished initialisation")
@@ -132,5 +135,6 @@ local function run()
     ros.spinOnce()
   end
 end
+
 
 run()

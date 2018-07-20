@@ -29,6 +29,7 @@ require 'cv.calib3d'
 local XI_RET,XI_RET_TEXT = ximea.XI_RET, ximea.XI_RET_TEXT
 
 local XimeaRosCam = torch.class('ximea_ros.XimeaRosCam', ximea_ros)
+
 local CaptureMode = {
   continuous = 0,
   triggered = 1
@@ -105,20 +106,28 @@ end
 function XimeaRosCam:capture(hardwareTriggered, timeout)
   hardwareTriggered = hardwareTriggered or false
   timeout = timeout or 1000
-  local img = self.camera:getImage(hardwareTriggered, timeout)
-  if img == nil then
+
+  -- AKo: retry was added, because in long-running tests failures had been observed (not retrying when hw-triggered)
+  for i=1,5 do
+    local img = self.camera:getImage(hardwareTriggered, timeout)
+    if img ~= nil then
+      local rosMessage = ximea_ros.createImageMessage(img, self.serial, self.camera:getColorMode())
+      return rosMessage
+    end
+
     local b = -1
     if hardwareTriggered == true then
       b = 1
     elseif hardwareTriggered == false then
       b = 0
     end
-    ros.WARN('Capturing image failed (cam serial: %s, hw trigger %d, timeout %d)', self.serial, b, timeout or -1)
-    return nil
+    ros.WARN('Capturing image failed (cam serial: %s, hw trigger %d, timeout %d, try: %d)', self.serial, b, timeout or -1, i)
+
+    -- do not retry if hardware triggering is used
+    if hardwareTriggered then break end
   end
 
-  local rosMessage = ximea_ros.createImageMessage(img, self.serial, self.camera:getColorMode())
-  return rosMessage
+  return nil
 end
 
 
