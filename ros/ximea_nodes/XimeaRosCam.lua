@@ -41,10 +41,22 @@ local DEFAULT_FLAGS = {
 }
 
 
+local function log(...)
+  local msg = string.format(...)
+  ros.INFO(msg)
+end
+
+
+local function fail(...)
+  local msg = string.format(...)
+  ros.ERROR(msg)
+  error(msg)
+end
+
+
 local function XI_CHECK(status, msg)
   if status ~= XI_RET.XI_OK then
-    ros.ERROR(msg)
-    error(msg)
+    fail(msg)
   end
 end
 
@@ -70,24 +82,32 @@ function XimeaRosCam:__init(nh, serial, mode, flags)
   elseif type(serial) == 'string' then
     self.camera:openCameraWithSerial(serial, mode, false, rate_limit)
   else
-    error('serial argument must be of type sring or number.')
+    fail('Serial argument must be of type sring or number.')
+  end
+
+  if not self.camera:isOpen() then
+    fail("Failed to open camera with serial '%s'.", serial)
   end
 
   self.serial = self.camera:getSerial()
+  if self.serial == nil or #self.serial == 0 then
+    fail('Unexpected: Internal camera serial number is nil or empty.')
+  end
+
   self.camera_topic = nh:advertise('SN_' .. escapeRosName(self.serial), ximea_ros.image_spec, 1, false)
   self.flags = flags or DEFAULT_FLAGS
 
   if self.flags.enableFPNCorrection then
-    print('Enabling PFN correction')
+    log('Enabling PFN correction')
     XI_CHECK(self.camera:setParamInt(ximea.PARAM.XI_PRM_COLUMN_FPN_CORRECTION, 1))
   end
 
   if self.flags.autoWhiteBalance and (mode == 'RGB24' or mode == 'RGB32') then
-    print('Enabling auto white-balance')
+    log('Enabling auto white-balance')
     XI_CHECK(self.camera:setParamInt(ximea.PARAM.XI_PRM_AUTO_WB, 1))
   end
 
-  print('Start camera acquisition')
+  log('Start camera acquisition')
   XI_CHECK(self.camera:startAcquisition())
 
   self.state = {
@@ -171,8 +191,8 @@ end
 
 function XimeaRosCam:startTrigger(numberOfFrames, exposureTimeInMicroSeconds)
   -- Set camera into hardware triggered mode
-  print(string.format("[XimeaRosCam:hwTrigger] start hw triggering for camera %s", self.serial))
-  print("[XimeaRosCam:hwTrigger] re-configure camera")
+  log("[XimeaRosCam:hwTrigger] start hw triggering for camera %s", self.serial)
+  log("[XimeaRosCam:hwTrigger] re-configure camera")
   local XI_TRG_EDGE_RISING = 1
   local XI_GPI_TRIGGER = 1
   local camera = self.camera
@@ -181,7 +201,7 @@ function XimeaRosCam:startTrigger(numberOfFrames, exposureTimeInMicroSeconds)
   camera:setParamInt("trigger_source", XI_TRG_EDGE_RISING)
   camera:setParamInt("buffers_queue_size", numberOfFrames + 1)
   camera:setParamInt("recent_frame", 0)
-  print("[XimeaRosCam:hwTrigger] set exposure to " .. exposureTimeInMicroSeconds)
+  log("[XimeaRosCam:hwTrigger] set exposure to " .. exposureTimeInMicroSeconds)
   self:setExposure(exposureTimeInMicroSeconds)
   self.state = {
     mode = CaptureMode.triggered,
@@ -194,7 +214,7 @@ end
 function XimeaRosCam:stopTrigger()
   -- Stop triggering and restore buffer settings
   local XI_TRG_SOFTWARE = 3
-  print("[XimeaRosCam:hwTrigger] hold triggering")
+  log("[XimeaRosCam:hwTrigger] hold triggering")
   local camera = self.camera
   camera:setParamInt("trigger_source", XI_TRG_SOFTWARE)
   camera:setParamInt("buffers_queue_size", 4)
@@ -234,10 +254,10 @@ function XimeaRosCam:hardwareTriggeredCapture(numberOfFrames, exposureTimeInMicr
     if imageMessage then
       table.insert(frames, imageMessage)
     else
-      print("[XimeaRosCam:hwTrigger] ERR: missed frame!")
+      log("[XimeaRosCam:hwTrigger] ERR: missed frame!")
     end
 
-    print ("Retrieved " .. i .. " in " .. t:time().real - last)
+    log("Retrieved " .. i .. " in " .. t:time().real - last)
     last = t:time().real
   end
 
@@ -245,7 +265,7 @@ function XimeaRosCam:hardwareTriggeredCapture(numberOfFrames, exposureTimeInMicr
   --camera:setParamInt("trigger_source", XI_TRG_SOFTWARE)
   --camera:startAcquisition()
 
-  print("[XimeaRosCam:hwTrigger] done in " .. t:time().real)
+  log("[XimeaRosCam:hwTrigger] done in " .. t:time().real)
   return frames
 end
 
@@ -257,7 +277,7 @@ function XimeaRosCam:hardwareTriggeredCaptureFullAuto(numberOfFrames, exposureTi
   -- Retrieve frames from camera buffer
   local processingDelayInMicroSeconds = 1000
   local waitForSeconds = (exposureTimeInMicroSeconds + processingDelayInMicroSeconds) / 1000000
-  print("[XimeaRosCam:hwTrigger] retrieving frames")
+  log("[XimeaRosCam:hwTrigger] retrieving frames")
   local frames = {}
   for i = 1, numberOfFrames do
     sys.sleep(waitForSeconds);
@@ -266,12 +286,12 @@ function XimeaRosCam:hardwareTriggeredCaptureFullAuto(numberOfFrames, exposureTi
     if imageMessage then
       table.insert(frames, imageMessage)
     end
-    print ("Retrieved " .. i .. " in " .. t:time().real - last)
+    log("Retrieved " .. i .. " in " .. t:time().real - last)
     last = t:time().real
   end
 
   self:stopTrigger()
-  print("[XimeaRosCam:hwTrigger] done in " .. t:time().real)
+  log("[XimeaRosCam:hwTrigger] done in " .. t:time().real)
   return frames
 end
 
