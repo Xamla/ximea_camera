@@ -1,4 +1,4 @@
-string[] serials                      # serial numbers of cameras to use (empty means all cameras)
+string[] serials                      # serial numbers of cameras to use (empty array means all cameras)
 ---
 string[] serials                      # serial numbers of cameras
 sensor_msgs/Image[] images            # image data

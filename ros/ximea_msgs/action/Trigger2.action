@@ -1,0 +1,19 @@
+# Define the goal
+string[] serials                          # serial numbers of cameras to use
+int8 trigger_source                        # 1: External trigger (rising edge), 2: External trigger (falling edge), 3: Software(manual) trigger.
+int8 gpi_index                             # physical pin used for triggering (only used with external trigger)
+uint32 frame_count                        # number of frames that should be taken by each camera
+uint32[] exposure_times_in_microseconds   # exposure time in microseconds
+uint32 timeout_in_ms                      # time out in milliseconds. 0 for no time out
+---
+# Define the result
+string[] serials                           # serial numbers of cameras
+uint32 total_frame_count                   # number of frames captured by all cameras
+ximea_msgs/ImageArray[] images_all_cameras # image data
+---
+# Define a feedback message
+int32[] status                            # 0: Camera not ready; 1: Camera ready, wait for frames being triggered; 2: Captured all frames; -1: Error state
+string[] serials                          # serial numbers of cameras
+uint32 total_frame_count                  # number of frames that were requested
+uint32 number_of_taken_frames             # number of frames already taken
+string error_message                      # provides more details about an error

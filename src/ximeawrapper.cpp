@@ -77,10 +77,8 @@ void initCam(unsigned int camNum, HANDLE &camera, XI_IMG_FORMAT color_fmt, bool 
 
   xiSetParamInt(0, XI_PRM_DEBUG_LEVEL, XI_DL_FATAL);
 
-
   // Disable auto bandwidth determination (takes some seconds in initialization)
   xiSetParamInt(0, XI_PRM_AUTO_BANDWIDTH_CALCULATION, XI_OFF);
-
 
   // Retrieve a handle to the camera device
   stat = xiOpenDevice(camNum, &camera);
@@ -145,19 +143,19 @@ extern "C" bool getSerialsStereo(StereoHandle *handle, char *serial_cam1, char *
 }
 
 
-extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTensor *image_out, bool hw_triggered, int timeout = 1000) {
+extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTensor *image_out, bool triggered, int timeout = 1000) {
   XI_IMG image;
   image.size = SIZE_XI_IMG_V2; // must be initialized
   image.bp = NULL;
   image.bp_size = 0;
 
   int stat = 0;
-  if (!hw_triggered) {
-    stat = xiSetParamInt(camera, XI_PRM_TRG_SOFTWARE, 0);
+  if (!triggered) {
+    stat = xiSetParamInt(camera, XI_PRM_TRG_SOFTWARE, 1);
     HandleResult(stat, "xiSetParam (XI_PRM_TRG_SOFTWARE)");
   }
 
-  //Retrieve image from camera
+  // retrieve image from camera
   stat = xiGetImage(camera, timeout, &image);
   HandleResult(stat, "xiGetImage");
 
@@ -182,54 +180,6 @@ extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTe
   }
 
   return false;
-}
-
-
-void getImage(const HANDLE &camera) {
-  int stat = 0;
-
-  stat = xiSetParamInt(camera, XI_PRM_TRG_SOURCE, XI_TRG_SOFTWARE);
-  HandleResult(stat,"xiSetParam (XI_PRM_TRG_SOURCE)");
-
-  stat = xiStartAcquisition(camera);
-  HandleResult(stat,"xiStartAcquisition");
-
-  XI_IMG image;
-  image.size = SIZE_XI_IMG_V2; // must be initialized
-  image.bp = NULL;
-  image.bp_size = 0;
-
-  int exposure = 16666;
-  int img_counter = 0;
-
-  while (true) {
-    stat = xiSetParamInt(camera, XI_PRM_TRG_SOFTWARE, 0);
-    HandleResult(stat,"xiSetParam (XI_PRM_TRG_SOFTWARE)");
-
-    // Retrieve image from camera
-    stat = xiGetImage(camera, 1000, &image);
-    HandleResult(stat,"xiGetImage");
-
-    cv::Mat m(image.height, image.width, CV_8U, (unsigned char*)image.bp);
-    cv::imshow("Captures", m);
-    int key = cv::waitKey(20);
-
-    if (key == 65362) /*arrow up*/{
-      exposure += 1000;
-      xiSetParamInt(camera, XI_PRM_EXPOSURE, exposure);
-      std::cout << "Set exposure to " << exposure / 1000 << " ms";
-    } else if (key == 65364 /*arrow down*/) {
-      exposure -= 1000;
-      xiSetParamInt(camera, XI_PRM_EXPOSURE, exposure);
-      std::cout << "Set exposure to " << exposure / 1000 << " ms";
-    } else if (key == 115) { /* s */
-      char fn[100];
-      sprintf(fn, "img_%06d.png", img_counter++);
-      cv::imwrite(fn, m);
-    }
-
-    if (key != -1) std::cout << "Key: " << key << std::endl;
-   }
 }
 
 
@@ -360,19 +310,3 @@ extern "C" bool setExposureStereo(StereoHandle *handle, int micro_sec) {
   bool cam2_ok = setExposure(handle->cam2, micro_sec);
   return cam1_ok && cam2_ok;
 }
-
-/*
-int main(int argc, char *argv[]) {
-
-  int stat = 0;
-  DWORD numCams = 0;
-  stat = xiGetNumberDevices(&numCams);
-
-  HANDLE cam_handle;
-  cam_handle = openCamera(0, XI_MONO8);
-  bool result = getSingleImage(cam_handle, XI_MONO8, NULL, false);
-  std::cout << "Capturing image ok? " <<  result << std::endl;
-
-  return 0;
-}
-*/

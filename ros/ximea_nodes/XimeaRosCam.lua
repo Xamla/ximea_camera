@@ -26,9 +26,17 @@ require 'cv.imgcodecs'
 require 'cv.imgproc'
 require 'cv.calib3d'
 
+
 local XI_RET,XI_RET_TEXT = ximea.XI_RET, ximea.XI_RET_TEXT
 
+local XI_TRG_EDGE_RISING = 1
+local XI_TRG_EDGE_FALLING = 2
+local XI_TRG_SOFTWARE = 3
+local XI_GPI_TRIGGER = 1
+
+
 local XimeaRosCam = torch.class('ximea_ros.XimeaRosCam', ximea_ros)
+
 
 local CaptureMode = {
   continuous = 0,
@@ -107,6 +115,10 @@ function XimeaRosCam:__init(nh, serial, mode, flags)
     XI_CHECK(self.camera:setParamInt(ximea.PARAM.XI_PRM_AUTO_WB, 1))
   end
 
+  self.camera:setParamInt(ximea.PARAM.XI_PRM_TRG_SOURCE, XI_TRG_SOFTWARE)
+  self.camera:setParamInt(ximea.PARAM.XI_PRM_BUFFERS_QUEUE_SIZE, 4)
+  self.camera:setParamInt(ximea.PARAM.XI_PRM_RECENT_FRAME, 1)
+
   log('Start camera acquisition')
   XI_CHECK(self.camera:startAcquisition())
 
@@ -123,28 +135,28 @@ function XimeaRosCam:hasSubscribers()
 end
 
 
-function XimeaRosCam:capture(hardwareTriggered, timeout)
-  hardwareTriggered = hardwareTriggered or false
+function XimeaRosCam:capture(triggered, timeout)
+  triggered = triggered or false
   timeout = timeout or 1000
 
   -- AKo: retry was added, because in long-running tests failures had been observed (not retrying when hw-triggered)
   for i=1,5 do
-    local img = self.camera:getImage(hardwareTriggered, timeout)
+    local img = self.camera:getImage(triggered, timeout)
     if img ~= nil then
       local rosMessage = ximea_ros.createImageMessage(img, self.serial, self.camera:getColorMode())
       return rosMessage
     end
 
     local b = -1
-    if hardwareTriggered == true then
+    if triggered == true then
       b = 1
-    elseif hardwareTriggered == false then
+    elseif triggered == false then
       b = 0
     end
     ros.WARN('Capturing image failed (cam serial: %s, hw trigger %d, timeout %d, try: %d)', self.serial, b, timeout or -1, i)
 
     -- do not retry if hardware triggering is used
-    if hardwareTriggered then break end
+    if triggered then break end
   end
 
   return nil
@@ -176,6 +188,7 @@ function XimeaRosCam:getState()
   return self.state
 end
 
+
 function XimeaRosCam:close()
   if self.camera_topic ~= nil then
     self.camera_topic:shutdown()
@@ -189,20 +202,36 @@ function XimeaRosCam:close()
 end
 
 
-function XimeaRosCam:startTrigger(numberOfFrames, exposureTimeInMicroSeconds)
+function XimeaRosCam:softwareTrigger()
+  return self.camera:softwareTrigger()
+end
+
+
+function XimeaRosCam:startTrigger(numberOfFrames, exposureTimeInMicroSeconds, trigger_source, gpi_index)
+  trigger_source = trigger_source or XI_TRG_EDGE_RISING
+  gpi_index = gpi_index or 1
+
   -- Set camera into hardware triggered mode
-  log("[XimeaRosCam:hwTrigger] start hw triggering for camera %s", self.serial)
+  log("[XimeaRosCam:hwTrigger] start triggering for camera %s", self.serial)
   log("[XimeaRosCam:hwTrigger] re-configure camera")
-  local XI_TRG_EDGE_RISING = 1
-  local XI_GPI_TRIGGER = 1
+  
   local camera = self.camera
-  camera:setParamInt("gpi_selector", 1)
-  camera:setParamInt("gpi_mode", XI_GPI_TRIGGER)
-  camera:setParamInt("trigger_source", XI_TRG_EDGE_RISING)
-  camera:setParamInt("buffers_queue_size", numberOfFrames + 1)
-  camera:setParamInt("recent_frame", 0)
+  
+  --camera:stopAcquisition()    -- AKo: Commented out since it is working without it and starting/stopping acquisition is slow
+  if trigger_source == XI_TRG_EDGE_RISING or trigger_source == XI_TRG_EDGE_FALLING then
+    camera:setParamInt(ximea.PARAM.XI_PRM_GPI_SELECTOR, gpi_index)
+    camera:setParamInt(ximea.PARAM.XI_PRM_GPI_MODE, XI_GPI_TRIGGER)
+    camera:setParamInt(ximea.PARAM.XI_PRM_TRG_SOURCE, XI_TRG_EDGE_RISING)
+  elseif trigger_source == XI_TRG_SOFTWARE then
+    camera:setParamInt(ximea.PARAM.XI_PRM_TRG_SOURCE, XI_TRG_SOFTWARE)
+  else
+    fail("Invalid trigger source '%d' specified", trigger_source)
+  end
+  camera:setParamInt(ximea.PARAM.XI_PRM_BUFFERS_QUEUE_SIZE, numberOfFrames + 1)
+  camera:setParamInt(ximea.PARAM.XI_PRM_RECENT_FRAME, 0)
   log("[XimeaRosCam:hwTrigger] set exposure to " .. exposureTimeInMicroSeconds)
   self:setExposure(exposureTimeInMicroSeconds)
+  --camera:startAcquisition()
   self.state = {
     mode = CaptureMode.triggered,
     target_frame_count = numberOfFrames,
@@ -213,86 +242,18 @@ end
 
 function XimeaRosCam:stopTrigger()
   -- Stop triggering and restore buffer settings
-  local XI_TRG_SOFTWARE = 3
-  log("[XimeaRosCam:hwTrigger] hold triggering")
+  log("[XimeaRosCam:hwTrigger] stop triggering")
   local camera = self.camera
-  camera:setParamInt("trigger_source", XI_TRG_SOFTWARE)
-  camera:setParamInt("buffers_queue_size", 4)
-  camera:setParamInt("recent_frame", 1)
+  --camera:stopAcquisition()
+  camera:setParamInt(ximea.PARAM.XI_PRM_TRG_SOURCE, XI_TRG_SOFTWARE)
+  camera:setParamInt(ximea.PARAM.XI_PRM_BUFFERS_QUEUE_SIZE, 4)
+  camera:setParamInt(ximea.PARAM.XI_PRM_RECENT_FRAME, 1)
+  --camera:startAcquisition()
   self.state = {
     mode = CaptureMode.continuous,
     target_frame_count = 0,
     frames = {}
   }
-end
-
-
-function XimeaRosCam:hardwareTriggeredCapture(numberOfFrames, exposureTimeInMicroSeconds)
-  local t = torch.Timer()
-
-  local XI_TRG_EDGE_RISING = 1
-  local XI_TRG_SOFTWARE = 3
-  local camera = self.camera
-  --camera:stopAcquisition()
-  --camera:setParamInt("trigger_source", XI_TRG_EDGE_RISING)
-  --camera:startAcquisition()
-
-  local frames = {}
-  local processingDelayInMicroSeconds = 1000
-  local waitForSeconds = (133333 - exposureTimeInMicroSeconds + processingDelayInMicroSeconds) / 1000000
-
-  for i = 1, numberOfFrames do
-    local last = t:time().real
-
-    --print("[XimeaRosCam:hwTrigger] wait for s:", waitForSeconds)
-    --sys.sleep(waitForSeconds)
-    local imageMessage = self:capture(false)
-    if i > 20 then -- fringe patterns are shown 133ms, because it takes the projector 400ms to load the next image
-      sys.sleep(waitForSeconds)
-    end
-
-    if imageMessage then
-      table.insert(frames, imageMessage)
-    else
-      log("[XimeaRosCam:hwTrigger] ERR: missed frame!")
-    end
-
-    log("Retrieved " .. i .. " in " .. t:time().real - last)
-    last = t:time().real
-  end
-
-  --camera:stopAcquisition()
-  --camera:setParamInt("trigger_source", XI_TRG_SOFTWARE)
-  --camera:startAcquisition()
-
-  log("[XimeaRosCam:hwTrigger] done in " .. t:time().real)
-  return frames
-end
-
-
-function XimeaRosCam:hardwareTriggeredCaptureFullAuto(numberOfFrames, exposureTimeInMicroSeconds)
-  local t = torch.Timer()
-  self:startTrigger(numberOfFrames, exposureTimeInMicroSeconds)
-
-  -- Retrieve frames from camera buffer
-  local processingDelayInMicroSeconds = 1000
-  local waitForSeconds = (exposureTimeInMicroSeconds + processingDelayInMicroSeconds) / 1000000
-  log("[XimeaRosCam:hwTrigger] retrieving frames")
-  local frames = {}
-  for i = 1, numberOfFrames do
-    sys.sleep(waitForSeconds);
-    local last = t:time().real
-    local imageMessage = self:capture(true)
-    if imageMessage then
-      table.insert(frames, imageMessage)
-    end
-    log("Retrieved " .. i .. " in " .. t:time().real - last)
-    last = t:time().real
-  end
-
-  self:stopTrigger()
-  log("[XimeaRosCam:hwTrigger] done in " .. t:time().real)
-  return frames
 end
 
 

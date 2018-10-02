@@ -1,5 +1,5 @@
 string command_name
 float32 value
-string[] serials         # serial numbers to select specific cameras (emtpy string means all cameras)
+string[] serials         # serial numbers to select specific cameras (emtpy array means all cameras)
 ---
 string response

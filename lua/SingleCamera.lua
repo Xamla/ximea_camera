@@ -34,11 +34,11 @@ function SingleCam:__init()
 end
 
 
-function SingleCam:getImage(hardwareTriggered, timeout)
+function SingleCam:getImage(triggered, timeout)
   timeout = timeout or 1000
+  triggered = triggered or false
   local img = torch.ByteTensor()
-  hardwareTriggered = hardwareTriggered or false
-  if not ximea.lib.getSingleImage(self.o, self.color_mode, img:cdata(), hardwareTriggered, timeout) then
+  if not ximea.lib.getSingleImage(self.o, self.color_mode, img:cdata(), triggered, timeout) then
     return nil, false
   else
     return img, true
@@ -134,6 +134,11 @@ end
 function SingleCam:setParamInt(paramName, value)
   local status = ximea.m3api.xiSetParamInt(self.o, paramName, value)
   return status, XI_RET_TEXT[status]
+end
+
+
+function SingleCam:softwareTrigger()
+  return self:setParamInt(ximea.PARAM.XI_PRM_TRG_SOFTWARE, 1)
 end
 
 
