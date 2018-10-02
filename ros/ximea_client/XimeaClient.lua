@@ -68,8 +68,8 @@ function XimeaClient:__init(nodeHandle, mode, permute_channels, rgb_conversion, 
   self.rgb_conversion = rgb_conversion or true
 
   local timeout = ros.Duration(5)
-  local ok = self.captureClient:waitForExistence(timeout) and 
-    self.sendCommandClient:waitForExistence(timeout) and 
+  local ok = self.captureClient:waitForExistence(timeout) and
+    self.sendCommandClient:waitForExistence(timeout) and
     self.softwareTriggerClient:waitForExistence(timeout)
 
   if not ok then
@@ -231,12 +231,12 @@ function XimeaClient:captureTriggeredAsync(serials, numberOfFrames, exposureTime
       while last_feedback == nil and ros.ok() and self.ximea_action_client.nh:ok() do
         -- truncate wait-time if necessary
         local time_left = timeout_time - ros.Time.now()
-        
+
         if time_left < ZERO_DURATION then
           -- timeout
           self.ximea_action_client:cancelGoal()
           task:setResult(TaskState.Failed, {code=XimeaClient.ERROR_TYPE.ACTION_CLIENT_TIMEOUT, message = 'Waiting for initial feedback from capture action server timed out.'})
-          break 
+          break
         end
 
         if not self.ximea_action_client:isServerConnected() then
@@ -281,6 +281,7 @@ function XimeaClient:softwareTrigger(serials)
     serials = { serials }
   end
   req.serials = serials or {}
+  assert(#req.serials > 0, 'No camera serial number provided.')
   return self.softwareTriggerClient:call(req)
 end
 

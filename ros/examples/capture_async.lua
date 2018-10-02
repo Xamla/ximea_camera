@@ -19,7 +19,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 local ros = require 'ros'
 require 'ximea.ros.XimeaClient'
-
+local cv = require 'cv'
+require 'cv.imgproc'
+require 'cv.imgcodecs'
+require 'cv.highgui'
 
 local function main()
 
@@ -28,7 +31,6 @@ local function main()
   local nh = ros.NodeHandle()
   local sp = ros.AsyncSpinner()
   sp:start()
-
 
   local cmd = torch.CmdLine()
   cmd:text()
@@ -57,6 +59,23 @@ local function main()
     end
     if capture_task:hasCompletedSuccessfully() then
       ros.INFO("Capture sucessful")
+
+      local image_set = capture_task:getResult()
+
+      local outputDirectoryId = os.date("%Y-%m-%d_%H%M%S")
+      local outputDirectory = path.join("/tmp/asyncCapture", outputDirectoryId)
+      os.execute("mkdir -p " .. outputDirectory)
+      for n = 1, #image_set do
+        local images = image_set[n]
+        for i = 1, #images do
+          if images[i]:nDimension() > 2 then
+            images[i] = cv.cvtColor{images[i], nil, cv.COLOR_RGB2BGR}
+          end
+          cv.imwrite{outputDirectory .. "/" .. n .. "_" .. i .. ".jpg", images[i]}
+        end
+      end
+      print(string.format("Wrote images to folder %s.", outputDirectory))
+
     else
       local result = capture_task:getResult()
       local err = result.message or 'Unkown error'

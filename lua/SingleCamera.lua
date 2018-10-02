@@ -138,7 +138,8 @@ end
 
 
 function SingleCam:softwareTrigger()
-  return self:setParamInt(ximea.PARAM.XI_PRM_TRG_SOFTWARE, 1)
+  local status = self:setParamInt(ximea.PARAM.XI_PRM_TRG_SOFTWARE, 1)
+  return status, XI_RET_TEXT[status]
 end
 
 

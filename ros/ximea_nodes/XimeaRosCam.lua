@@ -214,14 +214,14 @@ function XimeaRosCam:startTrigger(numberOfFrames, exposureTimeInMicroSeconds, tr
   -- Set camera into hardware triggered mode
   log("[XimeaRosCam:hwTrigger] start triggering for camera %s", self.serial)
   log("[XimeaRosCam:hwTrigger] re-configure camera")
-  
+
   local camera = self.camera
-  
+
   --camera:stopAcquisition()    -- AKo: Commented out since it is working without it and starting/stopping acquisition is slow
   if trigger_source == XI_TRG_EDGE_RISING or trigger_source == XI_TRG_EDGE_FALLING then
     camera:setParamInt(ximea.PARAM.XI_PRM_GPI_SELECTOR, gpi_index)
     camera:setParamInt(ximea.PARAM.XI_PRM_GPI_MODE, XI_GPI_TRIGGER)
-    camera:setParamInt(ximea.PARAM.XI_PRM_TRG_SOURCE, XI_TRG_EDGE_RISING)
+    camera:setParamInt(ximea.PARAM.XI_PRM_TRG_SOURCE, trigger_source)
   elseif trigger_source == XI_TRG_SOFTWARE then
     camera:setParamInt(ximea.PARAM.XI_PRM_TRG_SOURCE, XI_TRG_SOFTWARE)
   else

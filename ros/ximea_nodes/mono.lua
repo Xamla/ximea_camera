@@ -261,13 +261,15 @@ end
 
 local function handleSoftwareTrigger(request, response, header)
   local serials = request.serials
-  if serials == nil or #serials == 0 then
-    serials = keys(cameras)
-  end
 
   local ok = true
   response.message = ''
-  
+
+  if serials == nil or #serials == 0 then
+    ok = false
+    response.message = 'No camera serial number provided.'
+  end
+
   for i,serial in ipairs(serials) do
     local cam = cameras[serial]
     if cam ~= nil then
