@@ -23,7 +23,9 @@ local ros = require 'ros'
 local xamla_sysmon = require 'xamla_sysmon'
 local ximea = require 'ximea'
 local xr = require 'ximea_ros'
+local sl = require 'slstudio_service'
 require 'XimeaRosCam'
+require 'SlstudioService'
 
 require 'ros.actionlib.SimpleActionServer'
 local actionlib = ros.actionlib
@@ -39,10 +41,12 @@ local configuredModes = {}
 local srvSendCommand, srvCapture, srvSoftwareTrigger
 local action_server_trigger
 local action_server_trigger2
+local enable3dScanner = false
 local cameras = {}
 local opt   -- command line options
 local goal_state
 local image_array_spec = ros.MsgSpec('ximea_msgs/ImageArray')
+local slstudioService -- Only set when available on the system and enabled via flag.
 
 
 local function keys(t)
@@ -81,6 +85,7 @@ local function parseCmdLine(args)
   cmd:option('-mode', 'RGB24', 'The default camera mode (MONO8, MONO16, RGB24, RGB32, RAW8, RAW16).')
   cmd:option('-serials', '', 'Camera serial numbers (separated by comma).')
   cmd:option('-modes', '', 'Camera modes corresponding to serials (separated by comma)')
+  cmd:option('-enable3dScanner', false, 'Whether to enable 3d scanning capabilities')
 
   opt = cmd:parse(args or {})
 
@@ -93,6 +98,7 @@ local function parseCmdLine(args)
   overrideInputArguments('mode', nh:getParamString('mode'))
   overrideInputArguments('serials', nh:getParamString('serials'))
   overrideInputArguments('modes', nh:getParamString('modes'))
+  overrideInputArguments('enable3dScanner', nh:getParamBool('enable3dScanner'))
 
   print('Effective options:')
   print(opt)
@@ -105,6 +111,7 @@ local function parseCmdLine(args)
     local modes = string.split(opt.modes, ',')
     configuredModes = modes
   end
+  enable3dScanner = opt.enable3dScanner
 end
 
 
@@ -530,6 +537,15 @@ local function startServices()
   action_server_trigger2:registerGoalCallback(handleNewTriggerGoal)
   action_server_trigger2:registerPreemptCallback(handleTriggerGoalPreempted)
   action_server_trigger2:start()
+
+  if enable3dScanner == true then
+    local success = pcall(function() slstudioService = sl.SlstudioService() end)
+    if success == false then
+      print('WARNING: slstudio seems not to be installed on the system. 3d scanning capabilities will not be available.')
+    else
+      slstudioService:startServices(nh)
+    end
+  end
 end
 
 
@@ -540,6 +556,11 @@ local function shutdownServices()
   srvSoftwareTrigger:shutdown()
   action_server_trigger:shutdown()
   action_server_trigger2:shutdown()
+
+  if slstudioService ~= nil then
+    slstudioService:shutdown()
+    slstudioService = nil
+  end
 end
 
 

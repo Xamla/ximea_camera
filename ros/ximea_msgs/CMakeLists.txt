@@ -63,12 +63,14 @@ add_service_files(
   SendCommand.srv
   Capture.srv
   GetConnectedDevices.srv
+  SlstudioSetup.srv
 )
 
 ## Generate actions in the 'action' folder
 add_action_files(
   DIRECTORY action
   FILES   Trigger.action
+  SlstudioScan.action
 )
 
 ## Generate added messages and services with any dependencies listed here

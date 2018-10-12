@@ -1,0 +1,7 @@
+string stereo_configuration_file_path
+float32 shutter_speed_in_ms
+string[] serials                        # exactly two serials of cameras, first should be the left camera, seconde the right
+uint32[] crop_parameter                 # min, max of distance values that are discarded to reduce noise. Defaults to 300, 2500
+---
+bool success
+string error_message

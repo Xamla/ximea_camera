@@ -1,0 +1,6 @@
+# action for 3d scanning with slstudio. A call to the slstudio setup service is required before this action can be used
+float32 shutter_speed_in_ms         # cannot be larger as the one used in setup service call
+---
+---
+bool success
+sensor_msgs/PointCloud2 cloud
