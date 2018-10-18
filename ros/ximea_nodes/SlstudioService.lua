@@ -67,7 +67,7 @@ local function handleSlstudioSetup(request, response, header)
     slstudio:quitScanStereo()
   end
 
-  local code = slstudio:initScanStereoAsync(calibrationFile, slstudio.CAMERA_ROS, leftSerial, slstudio.CAMERA_ROS, rightSerial, minDist, maxDist, true, shutterSpeed);
+  local code = slstudio:initScanStereoThreaded(calibrationFile, slstudio.CAMERA_ROS, leftSerial, slstudio.CAMERA_ROS, rightSerial, minDist, maxDist, true, shutterSpeed);
 
   if code == 0 then
     slstudioInstance.initialized = true
@@ -118,7 +118,7 @@ function handleNewScanGoal(self)
   end
 
   slstudioInstance.scanning = true
-  local code, cloud, imageOn, imageOff, imageOnboard, imageShading = slstudio:scanStereoAsync(goal.goal.shutter_speed_in_ms, self.spinCallback)
+  local code, cloud, imageOn, imageOff, imageOnboard, imageShading = slstudio:scanStereoSpinning(goal.goal.shutter_speed_in_ms, self.spinCallback)
   slstudioInstance.scanning = false
 
   local r = scanActionServer:createResult()
