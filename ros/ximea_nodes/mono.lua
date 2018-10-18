@@ -47,6 +47,7 @@ local opt   -- command line options
 local goal_state
 local image_array_spec = ros.MsgSpec('ximea_msgs/ImageArray')
 local slstudioService -- Only set when available on the system and enabled via flag.
+local last_publish_time = ros.Time(0)
 
 
 local function keys(t)
@@ -522,6 +523,34 @@ local function handleTriggerGoalPreempted(action_server)
 end
 
 
+local function publishFrames()
+  for serial,cam in pairs(cameras) do
+    cam:publishFrame()
+  end
+end
+
+
+local function spinOnce(wait, min_wait) 
+  heartbeat:publish()
+  ros.spinOnce()
+
+  local delta = ros.Time.now() - last_publish_time
+  if delta:toSec() < min_wait then
+    wait:set(min_wait - delta:toSec())
+    wait:sleep()
+  end
+
+  if goal_state == nil then   -- do not publish frames while trigger action is active
+    last_publish_time = ros.Time.now()
+    publishFrames()
+  end
+
+  triggerWorker()
+  heartbeat:updateStatus(heartbeat.GO, "")
+  collectgarbage()
+end
+
+
 local function startServices()
   srvGetConnectedDevices = nh:advertiseService('get_connected_devices', ros.SrvSpec('ximea_msgs/GetConnectedDevices'), handleGetConnectedDevices)
   srvSendCommand = nh:advertiseService('send_command', ros.SrvSpec('ximea_msgs/SendCommand'), handleSendCommand)
@@ -539,7 +568,9 @@ local function startServices()
   action_server_trigger2:start()
 
   if enable3dScanner == true then
-    local success = pcall(function() slstudioService = sl.SlstudioService() end)
+    local min_wait = 1/MAX_FPS
+    local wait = ros.Duration()
+    local success = pcall(function() slstudioService = sl.SlstudioService(function() spinOnce(wait, min_wait) end) end)
     if success == false then
       print('WARNING: slstudio seems not to be installed on the system. 3d scanning capabilities will not be available.')
     else
@@ -564,13 +595,6 @@ local function shutdownServices()
 end
 
 
-local function publishFrames()
-  for serial,cam in pairs(cameras) do
-    cam:publishFrame()
-  end
-end
-
-
 local function main()
   local args,rosparam = seperateRosParams(arg)
 
@@ -589,29 +613,13 @@ local function main()
 
   startServices()
 
-  local last_publish_time = ros.Time(0)
   local min_wait = 1/MAX_FPS
   local wait = ros.Duration()
   ros.INFO('Set status to ' .. heartbeat.STARTING)
   heartbeat:updateStatus(heartbeat.STARTING, "")
+
   while ros.ok() do
-    heartbeat:publish()
-    ros.spinOnce()
-
-    local delta = ros.Time.now() - last_publish_time
-    if delta:toSec() < min_wait then
-      wait:set(min_wait - delta:toSec())
-      wait:sleep()
-    end
-
-    if goal_state == nil then   -- do not publish frames while trigger action is active
-      last_publish_time = ros.Time.now()
-      publishFrames()
-    end
-
-    triggerWorker()
-    heartbeat:updateStatus(heartbeat.GO, "")
-    collectgarbage()
+    spinOnce(wait, min_wait)
   end
 
   print('shutting down...')

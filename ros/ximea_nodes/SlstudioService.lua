@@ -67,7 +67,7 @@ local function handleSlstudioSetup(request, response, header)
     slstudio:quitScanStereo()
   end
 
-  local code = slstudio:initScanStereo(calibrationFile, slstudio.CAMERA_ROS, leftSerial, slstudio.CAMERA_ROS, rightSerial, minDist, maxDist, true, shutterSpeed);
+  local code = slstudio:initScanStereoAsync(calibrationFile, slstudio.CAMERA_ROS, leftSerial, slstudio.CAMERA_ROS, rightSerial, minDist, maxDist, true, shutterSpeed);
 
   if code == 0 then
     slstudioInstance.initialized = true
@@ -84,7 +84,7 @@ local function handleSlstudioSetup(request, response, header)
 end
 
 
-function handleNewScanGoal()
+function handleNewScanGoal(self)
   ros.INFO("Received new scan goal")
 
   if slstudioInstance.scanning == true then
@@ -118,7 +118,7 @@ function handleNewScanGoal()
   end
 
   slstudioInstance.scanning = true
-  local code, cloud, imageOn, imageOff, imageOnboard, imageShading = slstudio:scanStereo(goal.goal.shutter_speed_in_ms)
+  local code, cloud, imageOn, imageOff, imageOnboard, imageShading = slstudio:scanStereoAsync(goal.goal.shutter_speed_in_ms, self.spinCallback)
   slstudioInstance.scanning = false
 
   local r = scanActionServer:createResult()
@@ -139,9 +139,9 @@ function handleNewScanGoal()
 end
 
 
-function SlstudioService:__init()
+function SlstudioService:__init(spinCallback)
   slstudio = require 'slstudio'
-
+  self.spinCallback = spinCallback
   print('Slstudio initialized')
 end
 
@@ -156,7 +156,7 @@ function SlstudioService:startServices(nh)
   cloudPublisher = nh:advertise('slstudio/cloud', 'sensor_msgs/PointCloud2', 1)
 
   scanActionServer = actionlib.SimpleActionServer(nh, 'slstudio/scan', 'ximea_msgs/SlstudioScan')
-  scanActionServer:registerGoalCallback(handleNewScanGoal)
+  scanActionServer:registerGoalCallback(function() handleNewScanGoal(self) end)
   scanActionServer:start()
 end
 
