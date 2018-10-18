@@ -122,7 +122,7 @@ function handleNewScanGoal(self)
   slstudioInstance.scanning = false
 
   local r = scanActionServer:createResult()
-  if code == 0 then
+  if code == 0 and cloud ~= nil then
     r.success = true
     r.cloud = cloud
     scanActionServer:setSucceeded(r, '')
