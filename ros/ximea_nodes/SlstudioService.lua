@@ -161,7 +161,8 @@ function handleNewScanGoal(self)
   local r = scanActionServer:createResult()
   if code == 0 and cloud ~= nil then
     r.success = true
-    r.cloud = cloud
+    --r.cloud = cloud
+    ros.ERROR('Cloud data is currently not serialized!')
     r.image_on = ximea_ros.createImageMessage(imageOn, leftCameraSerial, MONO_COLOR_MODE)
     r.image_off = ximea_ros.createImageMessage(imageOff, leftCameraSerial, MONO_COLOR_MODE)
     scanActionServer:setSucceeded(r, 'Scan succeeded.')
