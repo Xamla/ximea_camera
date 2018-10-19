@@ -55,6 +55,8 @@ add_message_files(
   FILES
   StereoPair.msg
   ImageArray.msg
+  HeightAnalysisResponse.msg
+  HeightMap.msg
 )
 
 ## Generate services in the 'srv' folder

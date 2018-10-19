@@ -2,8 +2,6 @@
 float32 shutter_speed_in_ms         # cannot be larger as the one used in setup service call
 ---
 bool success
-sensor_msgs/Image mask
-sensor_msgs/Image color_map
-sensor_msgs/Image height_map
-sensor_msgs/Image image_on
+HeightAnalysisResponse response
+HeightMap height_map
 ---

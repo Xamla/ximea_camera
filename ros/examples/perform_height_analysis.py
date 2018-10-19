@@ -29,12 +29,17 @@ if __name__ == '__main__':
         rospy.init_node('heightAnalysisClient')
         result = heightAnalysisClient()
 
+	if result.success == False:
+            exit(1)
+
         try:
-            colorMap = bridge.imgmsg_to_cv2(result.color_map, "bgr8")
+            colorMap = bridge.imgmsg_to_cv2(result.response.color_map, "bgr8")
+            imageOn = bridge.imgmsg_to_cv2(result.response.image_on, "bgr8")
         except CvBridgeError, e:
             print(e)
         else:
             cv2.imwrite('/tmp/color_map.png', colorMap)
+            cv2.imwrite('/tmp/imageOn.png', imageOn)
 
         print("Done.")
     except rospy.ROSInterruptException:
