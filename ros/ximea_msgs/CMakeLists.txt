@@ -64,6 +64,7 @@ add_service_files(
   Capture.srv
   GetConnectedDevices.srv
   SlstudioSetup.srv
+  HeightAnalysisSetup.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -71,6 +72,7 @@ add_action_files(
   DIRECTORY action
   FILES   Trigger.action
   SlstudioScan.action
+  HeightAnalysis.action
 )
 
 ## Generate added messages and services with any dependencies listed here

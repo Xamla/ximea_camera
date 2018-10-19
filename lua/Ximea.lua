@@ -64,3 +64,6 @@ function ximea.getXiModeByName(mode_name)
   end
   return mode
 end
+
+ximea.OPENCV_IMG_FORMAT = {}
+ximea.OPENCV_IMG_FORMAT.CV_32FC1 = '32FC1'

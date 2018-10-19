@@ -47,6 +47,8 @@ function ximea_ros.createImageMessage(img, serial, color_mode)
     msg.encoding = "mono8"
   elseif color_mode == ximea.XI_IMG_FORMAT.MONO16 or color_mode == ximea.XI_IMG_FORMAT.RAW16 then
     msg.encoding = "mono16"
+  elseif color_mode == ximea.OPENCV_IMG_FORMAT.CV_32FC1 then
+    msg.encoding = ximea.OPENCV_IMG_FORMAT.CV_32FC1
   else
     error('Unsupported color format.')
   end

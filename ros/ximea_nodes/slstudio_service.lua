@@ -19,11 +19,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 local ros = require 'ros'
 local ximea = require 'ximea'
-
-local slstudio_service = {}
+local ximea_nodes = require 'ximea_nodes'
 
 local setup_service_spec = ros.MsgSpec('sensor_msgs/Image')
 
-slstudio_service.setup_service_spec = setup_service_spec
+ximea_nodes.setup_service_spec = setup_service_spec
+require 'HeightAnalysis'
 
-return slstudio_service
+return ximea_nodes

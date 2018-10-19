@@ -1,0 +1,5 @@
+float32 mask_min
+float32 mask_max
+---
+bool success
+string error_message
