@@ -120,7 +120,7 @@ local function isScanOnGoing(actionServer)
 end
 
 
-local function slstudioSetupCorrectly(actionServer)
+local function slstudioSetupCorrectly(actionServer, goal)
   if slstudioInstance.initialized == false then
     local r = actionServer:createResult()
     r.success = false
@@ -150,7 +150,7 @@ function handleNewScanGoal(self)
 
   local goal = scanActionServer:acceptNewGoal()
 
-  if (slstudioSetupCorrectly(scanActionServer) == false) then
+  if (slstudioSetupCorrectly(scanActionServer, goal) == false) then
     return;
   end
 
@@ -164,7 +164,7 @@ function handleNewScanGoal(self)
     r.cloud = cloud
     r.image_on = ximea_ros.createImageMessage(imageOn, leftCameraSerial, MONO_COLOR_MODE)
     r.image_off = ximea_ros.createImageMessage(imageOff, leftCameraSerial, MONO_COLOR_MODE)
-    scanActionServer:setSucceeded(r, '')
+    scanActionServer:setSucceeded(r, 'Scan succeeded.')
     ros.INFO('Scan succeeded.')
     cloud:setHeaderFrameId('world')
     local d = torch.tic()
@@ -197,7 +197,7 @@ function handleNewHeightAnalysisGoal(self)
 
   local goal = heightAnalysisActionServer:acceptNewGoal()
 
-  if (slstudioSetupCorrectly(heightAnalysisActionServer) == false) then
+  if (slstudioSetupCorrectly(heightAnalysisActionServer, goal) == false) then
     return;
   end
 
@@ -206,7 +206,7 @@ function handleNewHeightAnalysisGoal(self)
   slstudioInstance.scanning = false
 
   local height_map, color_map, mask
-  if code == 0 and cloud ~= nil then
+  if code == 0 and cloud ~= nil and cloud:points():dim() > 0 then
     height_map, color_map, mask = doHeightAnalysis(cloud, imageOn)
   end
 

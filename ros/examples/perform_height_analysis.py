@@ -28,7 +28,6 @@ if __name__ == '__main__':
     try:
         rospy.init_node('heightAnalysisClient')
         result = heightAnalysisClient()
-        print(result)
 
         try:
             colorMap = bridge.imgmsg_to_cv2(result.color_map, "bgr8")
