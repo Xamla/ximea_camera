@@ -181,10 +181,9 @@ end
 
 local function doHeightAnalysis(cloud, image_on)
   local h = heightAnalysis
-
   local height_map = h:generateHeightMap(cloud)
   local color_map = h:generateColorMap(height_map)
-  local mask = h:generateMask(height_map, mask_min, mask_max, 1)
+  local mask = h:generateMask(height_map, heightAnalysisConfig.maskMin, heightAnalysisConfig.maskMax, 1)
   return height_map, color_map, mask
 end
 
