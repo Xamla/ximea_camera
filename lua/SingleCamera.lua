@@ -78,7 +78,7 @@ function SingleCam:openCamera(device_index, mode, start_acquisition, rate_limit)
     start_acquisition = true
   end
 
-  print('Open mode: ')
+  print('[SingleCam] Open mode: ')
   print(self.color_mode)
 
   self.o = ximea.lib.openCamera(self.device_index, self.color_mode, start_acquisition)
@@ -86,6 +86,8 @@ function SingleCam:openCamera(device_index, mode, start_acquisition, rate_limit)
   local c_str = ffi.new("char[32]")
   ximea.lib.getSerialNumber(self.device_index, c_str)
   self.serial = ffi.string(c_str)
+
+  print('[SingleCam] Opened camera with serial: ', self.serial)
 
   if rate_limit ~= nil then
     print('[SingleCam] Set rate limit to ', rate_limit, self.serial, ximea.PARAM.XI_PRM_LIMIT_BANDWIDTH, rate_limit)

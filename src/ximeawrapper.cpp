@@ -185,7 +185,40 @@ extern "C" bool getSingleImage(HANDLE camera, XI_IMG_FORMAT img_format, THByteTe
 
 extern "C" HANDLE openCamera(unsigned int camera_index, XI_IMG_FORMAT color_mode, bool start_acquisition) {
   HANDLE handle = NULL;
-  initCam(camera_index, handle, color_mode, start_acquisition);
+  bool init_successful = false;
+  int retry_counter = 0;
+  int max_retries = 3;
+  XI_IMG image;
+  image.size = SIZE_XI_IMG_V2; // must be initialized
+  image.bp = NULL;
+  image.bp_size = 0;
+  int timeout = 250;
+
+  while ((retry_counter < max_retries) && !init_successful) {
+    printf("Try to initialize camera %d\n", camera_index);
+    initCam(camera_index, handle, color_mode, true);
+    xiSetParamInt(handle, XI_PRM_TRG_SOFTWARE, 1);
+    int stat = xiGetImage(handle, timeout, &image);
+    if (stat == XI_OK) {
+      printf("Successfully initialized camera %d\n", camera_index);
+      init_successful = true;
+    } else {
+      printf("Initialization of camera %d was not successful (error: %d), closing camera and trying again.\n", camera_index, stat);
+      closeDevice(handle);
+    }
+    retry_counter += 1;
+  }
+
+  if (!init_successful) {
+    printf("FATAL: Could not open camera %d after %d retries. Exiting.\n", camera_index, max_retries);
+    exit(EXIT_FAILURE);
+  } else {
+    if (!start_acquisition) {
+      int stat = xiStopAcquisition(handle);
+      HandleResult(stat, "xiStopAcquisition");
+    }
+  }
+
   return handle;
 }
 
