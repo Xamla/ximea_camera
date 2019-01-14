@@ -1,0 +1,4 @@
+CropBox crop_box
+---
+bool success
+string error_message

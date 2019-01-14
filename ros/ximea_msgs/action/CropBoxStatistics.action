@@ -1,0 +1,8 @@
+# action for 3d scanning with slstudio. A call to the slstudio setup service is required before this action can be used
+float32 shutter_speed_in_ms         # cannot be larger as the one used in setup service call
+geometry_msgs/Transform cloud_transform # point cloud is transformed by this transformation
+CropBox[] crop_boxes
+---
+bool success
+int64[] number_of_points
+---

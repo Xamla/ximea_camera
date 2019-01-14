@@ -57,6 +57,7 @@ add_message_files(
   ImageArray.msg
   HeightAnalysisResponse.msg
   HeightMap.msg
+  CropBox.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -67,6 +68,7 @@ add_service_files(
   GetConnectedDevices.srv
   SlstudioSetup.srv
   HeightAnalysisSetup.srv
+  CropBoxStatisticsSetDefaultCrop.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -75,6 +77,7 @@ add_action_files(
   FILES   Trigger.action
   SlstudioScan.action
   HeightAnalysis.action
+  CropBoxStatistics.action
 )
 
 ## Generate added messages and services with any dependencies listed here
