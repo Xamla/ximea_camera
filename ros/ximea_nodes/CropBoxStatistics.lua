@@ -2,7 +2,7 @@ local torch = require 'torch'
 local pcl = require 'pcl'
 local cap = require 'ximea_nodes'
 
-local CropBoxStatistics = torch.class('ximea_nodes.HeightAnalysis', cap)
+local CropBoxStatistics = torch.class('ximea_nodes.CropBoxStatistics', cap)
 
 local function computeCropBoxStatistics(cloud, crop_box)
     local box_min =

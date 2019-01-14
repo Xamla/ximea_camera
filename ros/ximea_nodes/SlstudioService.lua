@@ -23,6 +23,7 @@ local slstudio_service = require 'slstudio_service'
 require 'ros.actionlib.SimpleActionServer'
 local actionlib = ros.actionlib
 local tf = ros.tf
+local datatypes = require 'xamlamoveit.datatypes'
 require 'ros.PointCloud2SerializationHandler'
 
 local SlstudioService = torch.class('slstudio_service.SlstudioService', slstudio_service)
@@ -253,6 +254,15 @@ function handleNewHeightAnalysisGoal(self)
   end
 end
 
+local function poseMsg2TransformationMatrix(msg)
+    local pose = datatypes.Pose.new()
+    pose:setTranslation(torch.Tensor {msg.position.x, msg.position.y, msg.position.z})
+    pose:setRotation(
+       tf.Quaternion(msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w)
+    )
+    return pose:toTensor():float()
+end
+
 function handleCropBoxStatisticsisGoal(self)
   ros.INFO('Received new crop box statistics goal')
 
@@ -271,13 +281,11 @@ function handleCropBoxStatisticsisGoal(self)
     slstudio:scanStereoSpinning(goal.goal.shutter_speed_in_ms, self.spinCallback)
   slstudioInstance.scanning = false
 
-  print('pose:', goal.goal.pose)
-  print('crop_boxes:', goal.goal.crop_boxes)
-  code = 1
+  local pose_transformation_matrix = poseMsg2TransformationMatrix(goal.goal.cloud_transform)
 
   local point_counts
   if code == 0 and cloud ~= nil and cloud:points():dim() > 0 then
-    point_counts = cropBoxStatistics:run(cloud, goal.goal.pose, goal.goal.crop_boxes)
+    point_counts = cropBoxStatistics:run(cloud, pose_transformation_matrix, goal.goal.crop_boxes)
   end
 
   local r = cropBoxStatisticsActionServer:createResult()
