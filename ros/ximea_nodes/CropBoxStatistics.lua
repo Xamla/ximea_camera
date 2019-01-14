@@ -5,6 +5,7 @@ local cap = require 'ximea_nodes'
 local CropBoxStatistics = torch.class('ximea_nodes.CropBoxStatistics', cap)
 
 local function computeCropBoxStatistics(cloud, crop_box)
+    print('compute for crop box')
     local box_min =
         torch.FloatTensor(
         {
@@ -23,6 +24,10 @@ local function computeCropBoxStatistics(cloud, crop_box)
         }
     )
 
+    print('box min:', box_min)
+    print('box max:', box_max)
+
+    local d = torch.tic()
     local inlier_indices =
         pcl.filter.cropBox(
         cloud, -- input
@@ -37,13 +42,14 @@ local function computeCropBoxStatistics(cloud, crop_box)
         nil, -- removed_indices
         true -- keep_organized
     )
+    print('processing time crop:', torch.toc(d))
 
-    local cropped_cloud = pcl.filter.extractIndices(cloud, inlier_indices)
+    -- local cropped_cloud = pcl.filter.extractIndices(cloud, inlier_indices)
 
-    local centroid = cropped_cloud:compute3DCentroid()
-    local covariance = cropped_cloud:computeCovarianceMatrix(centroid)
+    -- local centroid = cropped_cloud:compute3DCentroid()
+    -- local covariance = cropped_cloud:computeCovarianceMatrix(centroid)
 
-    return inlier_indices:size(), centroid, covariance
+    return inlier_indices:size(), nil, nil
 end
 
 function CropBoxStatistics.getDefaultParameters()
@@ -90,6 +96,10 @@ end
 
 function CropBoxStatistics:run(cloud, pose, crop_boxes)
     -- crop box
+    print('default crop box min:', self.parameters.crop_box.min)
+    print('default crop box max:', self.parameters.crop_box.max)
+
+    local d = torch.tic()
     local cropped =
         pcl.filter.cropBox(
         cloud, -- input
@@ -104,8 +114,10 @@ function CropBoxStatistics:run(cloud, pose, crop_boxes)
         nil, -- removed_indices
         true -- keep_organized
     )
+    print('processing time default crop:', torch.toc(d))
 
     -- statistical outlier removal
+    d = torch.tic()
     local denoised =
         pcl.filter.statisticalOutlierRemoval(
         cropped, -- input
@@ -117,8 +129,11 @@ function CropBoxStatistics:run(cloud, pose, crop_boxes)
         nil, -- removed_indices
         true -- keep_organized
     )
+    print('processing time denoising:', torch.toc(d))
 
+    d = torch.tic()
     local transformed_denoised = denoised:transform(pose)
+    print('processing time pointcloud transform:', torch.toc(d))
 
     local point_counts = {}
     local centroids = {}
