@@ -44,12 +44,12 @@ local function computeCropBoxStatistics(cloud, crop_box)
     )
     print('processing time crop:', torch.toc(d))
 
-    -- local cropped_cloud = pcl.filter.extractIndices(cloud, inlier_indices)
+    local cropped_cloud = pcl.filter.extractIndices(cloud, inlier_indices)
 
-    -- local centroid = cropped_cloud:compute3DCentroid()
-    -- local covariance = cropped_cloud:computeCovarianceMatrix(centroid)
+    local centroid = cropped_cloud:compute3DCentroid()
+    local covariance = cropped_cloud:computeCovarianceMatrix(centroid)
 
-    return inlier_indices:size(), nil, nil
+    return inlier_indices:size(), centroid, covariance
 end
 
 function CropBoxStatistics.getDefaultParameters()
@@ -116,11 +116,15 @@ function CropBoxStatistics:run(cloud, pose, crop_boxes)
     )
     print('processing time default crop:', torch.toc(d))
 
+    -- remove nan indices
+    local c = pcl.filter.removeNaNFromPointCloud(cropped)
+    local sampled = pcl.filter.randomSample(c, c:size() * 0.5)
+
     -- statistical outlier removal
     d = torch.tic()
     local denoised =
         pcl.filter.statisticalOutlierRemoval(
-        cropped, -- input
+        sampled, -- input
         self.parameters.outlier_removal.mean_k, -- meanK
         self.parameters.outlier_removal.standard_deviation_threshold, -- stddevMulThresh
         nil, -- indices
