@@ -33,7 +33,9 @@ local actionlib = ros.actionlib
 local XI_RET,XI_RET_TEXT = ximea.XI_RET, ximea.XI_RET_TEXT
 
 local NODE_NAME = 'ximea_mono'
-local MAX_FPS = 250
+local MAX_FPS = 100
+local GC_INTERVAL = 1.0 -- delay between two garbage collector calls in seconds
+local last_gc_run = ros.Time(0)
 
 local nh, spinner, heartbeat
 local configuredSerialNumbers
@@ -530,15 +532,9 @@ local function publishFrames()
 end
 
 
-local function spinOnce(wait, min_wait) 
+local function spinOnce(min_wait)
   heartbeat:publish()
-  ros.spinOnce()
-
-  local delta = ros.Time.now() - last_publish_time
-  if delta:toSec() < min_wait then
-    wait:set(min_wait - delta:toSec())
-    wait:sleep()
-  end
+  ros.spinOnce(min_wait)
 
   if goal_state == nil then   -- do not publish frames while trigger action is active
     last_publish_time = ros.Time.now()
@@ -547,7 +543,12 @@ local function spinOnce(wait, min_wait)
 
   triggerWorker()
   heartbeat:updateStatus(heartbeat.GO, "")
-  collectgarbage()
+
+  local gc_delta = ros.Time.now() - last_gc_run
+  if gc_delta:toSec() > GC_INTERVAL then
+    collectgarbage()
+    last_gc_run = ros.Time.now()
+  end
 end
 
 
@@ -569,8 +570,7 @@ local function startServices()
 
   if enable3dScanner == true then
     local min_wait = 1/MAX_FPS
-    local wait = ros.Duration()
-    local success = pcall(function() slstudioService = sl.SlstudioService(function() spinOnce(wait, min_wait) end) end)
+    local success = pcall(function() slstudioService = sl.SlstudioService(function() spinOnce(min_wait) end) end)
     if success == false then
       print('WARNING: slstudio seems not to be installed on the system. 3d scanning capabilities will not be available.')
     else
@@ -614,12 +614,11 @@ local function main()
   startServices()
 
   local min_wait = 1/MAX_FPS
-  local wait = ros.Duration()
   ros.INFO('Set status to ' .. heartbeat.STARTING)
   heartbeat:updateStatus(heartbeat.STARTING, "")
 
   while ros.ok() do
-    spinOnce(wait, min_wait)
+    spinOnce(min_wait)
   end
 
   print('shutting down...')
